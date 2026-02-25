@@ -22,12 +22,6 @@ export const commandEdit = Command.make("edit").pipe(
   Command.withDescription(
     "Open the selected project's .lalph/prd.yml in your editor.",
   ),
-  handler,
-)
-
-export const commandEditAlias = Command.make("e").pipe(
-  Command.withDescription(
-    "Alias for 'edit' (open the selected project's .lalph/prd.yml in your editor).",
-  ),
+  Command.withAlias("e"),
   handler,
 )

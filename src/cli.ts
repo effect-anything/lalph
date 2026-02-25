@@ -6,17 +6,17 @@ import { NodeRuntime } from "@effect/platform-node"
 import { Settings } from "./Settings.ts"
 import { commandRoot } from "./commands/root.ts"
 import { commandPlan } from "./commands/plan.ts"
-import { commandIssue, commandIssueAlias } from "./commands/issue.ts"
-import { commandEdit, commandEditAlias } from "./commands/edit.ts"
+import { commandIssue } from "./commands/issue.ts"
+import { commandEdit } from "./commands/edit.ts"
 import { commandSource } from "./commands/source.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { TracingLayer } from "./Tracing.ts"
 import { MinimumLogLevel } from "effect/References"
 import { atomRuntime, lalphMemoMap } from "./shared/runtime.ts"
 import { PlatformServices } from "./shared/platform.ts"
-import { commandProjects, commandProjectsAlias } from "./commands/projects.ts"
+import { commandProjects } from "./commands/projects.ts"
 import { commandSh } from "./commands/sh.ts"
-import { commandAgents, commandAgentsAlias } from "./commands/agents.ts"
+import { commandAgents } from "./commands/agents.ts"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -27,10 +27,6 @@ commandRoot.pipe(
     commandSource,
     commandAgents,
     commandProjects,
-    commandAgentsAlias,
-    commandEditAlias,
-    commandIssueAlias,
-    commandProjectsAlias,
   ]),
   Command.provide(Settings.layer),
   Command.provide(TracingLayer),

@@ -15,12 +15,6 @@ export const commandAgents = Command.make("agents").pipe(
   Command.withDescription(
     "Manage agent presets used to run tasks. Use 'ls' to inspect presets and 'add'/'edit' to configure agents, arguments, and any issue-source options.",
   ),
-  subcommands,
-)
-
-export const commandAgentsAlias = Command.make("a").pipe(
-  Command.withDescription(
-    "Alias for 'agents' (manage agent presets used to run tasks).",
-  ),
+  Command.withAlias("a"),
   subcommands,
 )
