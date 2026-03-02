@@ -28,6 +28,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
 
     const inExisting = yield* fs.exists(pathService.join(".lalph", "prd.yml"))
     if (inExisting) {
@@ -44,13 +45,14 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* () {
         yield* execIgnore(
+          spawner,
           ChildProcess.make`git worktree remove --force ${directory}`,
         )
       }),
     )
 
     yield* ChildProcess.make`git worktree add ${directory} -d HEAD`.pipe(
-      ChildProcess.exitCode,
+      spawner.exitCode,
     )
 
     yield* fs.makeDirectory(pathService.join(directory, ".lalph"), {
@@ -86,8 +88,10 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   )
 }
 
-const execIgnore = (command: ChildProcess.Command) =>
-  command.pipe(ChildProcess.exitCode, Effect.catchCause(Effect.logWarning))
+const execIgnore = (
+  spawner: ChildProcessSpawner.ChildProcessSpawner["Service"],
+  command: ChildProcess.Command,
+) => command.pipe(spawner.exitCode, Effect.catchCause(Effect.logWarning))
 
 const seedSetupScript = Effect.fnUntraced(function* (setupPath: string) {
   const fs = yield* FileSystem.FileSystem
@@ -111,6 +115,7 @@ const setupWorktree = Effect.fnUntraced(function* (options: {
     ...args: Array<string | number | boolean>
   ) => Effect.Effect<ChildProcessSpawner.ExitCode, PlatformError.PlatformError>
 }) {
+  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
   const fs = yield* FileSystem.FileSystem
   const pathService = yield* Path.Path
   const targetBranch = yield* getTargetBranch
@@ -142,7 +147,7 @@ const setupWorktree = Effect.fnUntraced(function* (options: {
   yield* ChildProcess.make({
     cwd: options.directory,
     shell: process.env.SHELL ?? true,
-  })`${setupPath}`.pipe(ChildProcess.exitCode)
+  })`${setupPath}`.pipe(spawner.exitCode)
 })
 
 const getTargetBranch = Effect.gen(function* () {
@@ -178,7 +183,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
       cwd: options.directory,
       stderr: "inherit",
       stdout: "inherit",
-    })(template, ...args).pipe(ChildProcess.exitCode, provide)
+    })(template, ...args).pipe(spawner.exitCode, provide)
 
   const execString = (
     template: TemplateStringsArray,
@@ -186,7 +191,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
   ) =>
     ChildProcess.make({
       cwd: options.directory,
-    })(template, ...args).pipe(ChildProcess.string, provide)
+    })(template, ...args).pipe(spawner.string, provide)
 
   const viewPrState = (prNumber?: number) =>
     execString`gh pr view ${prNumber ? prNumber : ""} --json number,state`.pipe(
@@ -298,7 +303,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
     ChildProcess.make({
       cwd: dir,
     })`git branch --show-current`.pipe(
-      ChildProcess.string,
+      spawner.string,
       provide,
       Effect.flatMap((output) =>
         Option.some(output.trim()).pipe(

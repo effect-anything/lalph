@@ -1,6 +1,6 @@
 import { Command } from "effect/unstable/cli"
 import { Effect, FileSystem, Layer, Path } from "effect"
-import { ChildProcess } from "effect/unstable/process"
+import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { Prd } from "../Prd.ts"
 import { Worktree } from "../Worktree.ts"
 import { layerProjectIdPrompt } from "../Projects.ts"
@@ -17,6 +17,7 @@ export const commandSh = Command.make("sh").pipe(
         const fs = yield* FileSystem.FileSystem
         const pathService = yield* Path.Path
         const lalphDirectory = yield* resolveLalphDirectory
+        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
 
         // link to lalph config
         yield* fs.symlink(
@@ -33,7 +34,7 @@ export const commandSh = Command.make("sh").pipe(
           stdin: "inherit",
           stdout: "inherit",
           stderr: "inherit",
-        }).pipe(ChildProcess.exitCode)
+        }).pipe(spawner.exitCode)
       },
       Effect.scoped,
       Effect.provide(

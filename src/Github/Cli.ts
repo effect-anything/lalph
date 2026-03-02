@@ -23,7 +23,7 @@ export class GithubCli extends ServiceMap.Service<GithubCli>()(
 
       const nameWithOwner =
         yield* ChildProcess.make`gh repo view --json nameWithOwner -q ${".nameWithOwner"}`.pipe(
-          ChildProcess.string,
+          spawner.string,
           Effect.option,
           Effect.flatMap(
             flow(
@@ -40,7 +40,7 @@ export class GithubCli extends ServiceMap.Service<GithubCli>()(
 
       const reviewComments = (pr: number) =>
         ChildProcess.make`gh api graphql -f owner=${owner} -f repo=${repo} -F pr=${pr} -f query=${githubReviewCommentsQuery}`.pipe(
-          ChildProcess.string,
+          spawner.string,
           Effect.flatMap(Schema.decodeEffect(PullRequestDataFromJson)),
           Effect.map((data) => {
             const comments =

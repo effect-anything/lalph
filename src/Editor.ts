@@ -15,7 +15,7 @@ export class Editor extends ServiceMap.Service<Editor>()("lalph/Editor", {
         stdout: "inherit",
         stderr: "inherit",
       }).pipe(
-        ChildProcess.exitCode,
+        spawner.exitCode,
         Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
         Effect.orDie,
       )
@@ -41,7 +41,7 @@ export class Editor extends ServiceMap.Service<Editor>()("lalph/Editor", {
             stdout: "inherit",
             stderr: "inherit",
           },
-        ).pipe(ChildProcess.exitCode)
+        ).pipe(spawner.exitCode)
 
         if (exitCode !== 0) {
           return yield* new Cause.NoSuchElementError()

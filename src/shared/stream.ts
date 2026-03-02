@@ -5,6 +5,6 @@ export const streamFilterJson = <S extends Schema.Top>(schema: S) => {
   const decode = Schema.decodeEffect(fromString)
   return flow(
     Stream.splitLines,
-    Stream.filterEffect((line) => decode(line).pipe(Effect.result)),
+    Stream.filterMapEffect((line) => decode(line).pipe(Effect.result)),
   )
 }

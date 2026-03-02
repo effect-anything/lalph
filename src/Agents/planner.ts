@@ -1,6 +1,6 @@
 import { Effect, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
-import { ChildProcess } from "effect/unstable/process"
+import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 
@@ -13,6 +13,7 @@ export const agentPlanner = Effect.fnUntraced(function* (options: {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
+  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
 
   yield* pipe(
     options.preset.cliAgent.commandPlan({
@@ -22,6 +23,6 @@ export const agentPlanner = Effect.fnUntraced(function* (options: {
     }),
     ChildProcess.setCwd(worktree.directory),
     options.preset.withCommandPrefix,
-    ChildProcess.exitCode,
+    spawner.exitCode,
   )
 })

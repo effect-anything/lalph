@@ -12,7 +12,7 @@ import { agentTasker } from "../Agents/tasker.ts"
 import { commandPlanTasks } from "./plan/tasks.ts"
 import { Editor } from "../Editor.ts"
 import { selectCliAgentPreset } from "../Presets.ts"
-import { ChildProcess } from "effect/unstable/process"
+import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { parseBranch } from "../shared/git.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
@@ -155,6 +155,7 @@ const commitAndPushSpecification = Effect.fnUntraced(
   }) {
     const worktree = yield* Worktree
     const pathService = yield* Path.Path
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
 
     const absSpecsDirectory = pathService.join(
       worktree.directory,
@@ -166,7 +167,7 @@ const commitAndPushSpecification = Effect.fnUntraced(
         cwd: worktree.directory,
         stdout: "inherit",
         stderr: "inherit",
-      }).pipe(ChildProcess.exitCode)
+      }).pipe(spawner.exitCode)
 
     const addCode = yield* git(["add", absSpecsDirectory])
     if (addCode !== 0) {
