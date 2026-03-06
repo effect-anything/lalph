@@ -381,9 +381,11 @@ export const commandRoot = Command.make("lalph", {
   iterations,
   maxIterationMinutes,
   stallMinutes,
-  specsDirectory,
-  verbose,
 }).pipe(
+  Command.withSharedFlags({
+    specsDirectory,
+    verbose,
+  }),
   Command.withDescription(
     "Run the task loop across all enabled projects in parallel: pull issues from the current issue source and execute them with your configured agent preset(s). Use --iterations for a bounded run, and configure per-project concurrency via lalph projects edit.",
   ),
