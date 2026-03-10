@@ -227,7 +227,7 @@ ${keyInformation(options)}`
         readonly specsDirectory: string
         readonly githubPrNumber: number | undefined
         readonly gitFlow: GitFlow["Service"]
-      }) => `# The task
+      }) => `Your job is to implement this task:
 
 ID: ${options.task.id}
 Task: ${options.task.title}
@@ -235,9 +235,7 @@ Description:
 
 ${options.task.description}
 
-# Instructions
-
-Your job is to implement the task described above.
+# Workflow
 
 1. Carefully study the current task list to understand the context of the task, and
    discover any key learnings from previous work.
