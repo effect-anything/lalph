@@ -2,14 +2,29 @@ import { Duration, Effect, Path, pipe } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
+import { runClanka } from "../Clanka.ts"
+import { ExitCode } from "effect/unstable/process/ChildProcessSpawner"
 
 export const agentWorker = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
   readonly preset: CliAgentPreset
+  readonly system?: string
   readonly prompt: string
 }) {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
+
+  // use clanka
+  if (!options.preset.cliAgent.command) {
+    yield* runClanka({
+      directory: worktree.directory,
+      model: options.preset.extraArgs.join(" "),
+      system: options.system,
+      prompt: options.prompt,
+      stallTimeout: options.stallTimeout,
+    })
+    return ExitCode(0)
+  }
 
   const cliCommand = pipe(
     options.preset.cliAgent.command({

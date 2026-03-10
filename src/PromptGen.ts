@@ -415,6 +415,23 @@ setup dependencies between the tasks using the \`blockedBy\` field.
  
 ${prdNotes(options)}`
 
+      const promptPlanTasksClanka = (options: {
+        readonly specsDirectory: string
+        readonly specificationPath: string
+      }) => `Your job is to convert the implementation plan in the specification file at
+\`${options.specificationPath}\` into tasks.
+
+Before starting, read the entire task list to understand the context of existing tasks
+and to ensure you do not create duplicate tasks.
+
+Make sure each task is small, atomic and independently shippable without failing
+validation checks (typechecks, linting, tests).
+Each task should include a reference to the specification file in its description.
+
+Make sure to setup dependencies between the tasks using the \`blockedBy\` field.
+
+**Important:** You are only creating or updating a plan, not implementing any tasks yet.`
+
       return {
         promptChoose,
         promptChooseClanka,
@@ -426,6 +443,7 @@ ${prdNotes(options)}`
         promptTimeoutClanka,
         planPrompt,
         promptPlanTasks,
+        promptPlanTasksClanka,
         systemClanka,
       } as const
     }),

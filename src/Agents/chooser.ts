@@ -1,4 +1,13 @@
-import { Data, Duration, Effect, FileSystem, Path, pipe, Schema } from "effect"
+import {
+  Data,
+  Deferred,
+  Duration,
+  Effect,
+  FileSystem,
+  Path,
+  pipe,
+  Schema,
+} from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -7,6 +16,8 @@ import { RunnerStalled } from "../domain/Errors.ts"
 import { makeWaitForFile } from "../shared/fs.ts"
 import { GitFlow } from "../GitFlow.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
+import { runClanka } from "../Clanka.ts"
+import { ChosenTaskDeferred } from "../TaskTools.ts"
 
 export const agentChooser = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
@@ -19,6 +30,29 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
   const prd = yield* Prd
   const gitFlow = yield* GitFlow
   const waitForFile = yield* makeWaitForFile
+
+  // use clanka
+  if (!options.preset.cliAgent.command) {
+    const deferred = ChosenTaskDeferred.of(Deferred.makeUnsafe())
+    const result = yield* runClanka({
+      directory: worktree.directory,
+      model: options.preset.extraArgs.join(" "),
+      prompt: promptGen.promptChooseClanka({ gitFlow }),
+      stallTimeout: options.stallTimeout,
+      withChoose: true,
+    }).pipe(
+      Effect.provideService(ChosenTaskDeferred, deferred),
+      Effect.flatMap(() => Effect.fail(new ChosenTaskNotFound())),
+      Effect.raceFirst(Deferred.await(deferred)),
+    )
+    const prdTask = yield* prd.findById(result.taskId)
+    if (!prdTask) throw new ChosenTaskNotFound()
+    return {
+      id: result.taskId,
+      githubPrNumber: result.githubPrNumber ?? null,
+      prd: prdTask,
+    }
+  }
 
   const taskJsonCreated = waitForFile(
     pathService.join(worktree.directory, ".lalph"),

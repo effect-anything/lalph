@@ -12,7 +12,7 @@ export class CliAgent<const Id extends string> extends Data.Class<{
   id: Id
   name: string
   outputTransformer?: OutputTransformer | undefined
-  command: (options: {
+  command?: (options: {
     readonly prompt: string
     readonly prdFilePath: string
     readonly extraArgs: ReadonlyArray<string>
@@ -27,6 +27,34 @@ export class CliAgent<const Id extends string> extends Data.Class<{
 export type OutputTransformer = (
   stream: Stream.Stream<string, PlatformError.PlatformError>,
 ) => Stream.Stream<string, PlatformError.PlatformError>
+
+const clanka = new CliAgent({
+  id: "clanka",
+  name: "clanka",
+  commandPlan: ({ prompt, prdFilePath, dangerous }) =>
+    ChildProcess.make(
+      "opencode",
+      [
+        "--prompt",
+        `@${prdFilePath}
+
+${prompt}`,
+      ],
+      {
+        extendEnv: true,
+        ...(dangerous
+          ? {
+              env: {
+                OPENCODE_PERMISSION: '{"*":"allow"}',
+              },
+            }
+          : {}),
+        stdout: "inherit",
+        stderr: "inherit",
+        stdin: "inherit",
+      },
+    ),
+})
 
 const opencode = new CliAgent({
   id: "opencode",
@@ -178,7 +206,7 @@ ${prompt}`,
     })`echo ${"Plan mode is not supported for amp."}`,
 })
 
-export const allCliAgents = [opencode, claude, codex, amp] as const
+export const allCliAgents = [clanka, opencode, claude, codex, amp] as const
 export type AnyCliAgent = (typeof allCliAgents)[number]
 
 export const CliAgentFromId = Schema.Literals(

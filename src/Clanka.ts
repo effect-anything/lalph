@@ -5,7 +5,7 @@ import {
   TaskToolsHandlers,
   TaskToolsWithChoose,
 } from "./TaskTools.ts"
-import { clankaSubagent } from "./ClankaModels.ts"
+import { ClankaModels, clankaSubagent } from "./ClankaModels.ts"
 import { withStallTimeout } from "./shared/stream.ts"
 import type { AiError } from "effect/unstable/ai"
 import type { RunnerStalled } from "./domain/Errors.ts"
@@ -14,18 +14,21 @@ export const runClanka = Effect.fnUntraced(
   /** The working directory to run the agent in */
   function* (options: {
     readonly directory: string
+    readonly model: string
     readonly prompt: string
     readonly system?: string | undefined
     readonly stallTimeout?: Duration.Input | undefined
     readonly withChoose?: boolean | undefined
   }) {
+    const models = yield* ClankaModels
     const agent = yield* Agent.make({
       ...options,
       tools: options.withChoose
         ? TaskToolsWithChoose
         : (TaskTools as unknown as typeof TaskToolsWithChoose),
-      subagentModel: clankaSubagent,
-    })
+      subagentModel: clankaSubagent(models, options.model),
+    }).pipe(Effect.provide(models.get(options.model)))
+
     let stream = options.stallTimeout
       ? withStallTimeout(options.stallTimeout)(agent.output)
       : agent.output

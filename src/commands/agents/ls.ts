@@ -30,7 +30,6 @@ export const commandAgentsLs = Command.make("ls").pipe(
         console.log(`Preset: ${preset.id}`)
         yield* source.cliAgentPresetInfo(preset)
         console.log(`  CLI agent: ${preset.cliAgent.name}`)
-        console.log(`  Clanka model: ${preset.clankaModel ?? "none"}`)
         if (preset.extraArgs.length > 0) {
           console.log(`  Extra args: ${preset.extraArgs.join(" ")}`)
         }

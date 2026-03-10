@@ -1,53 +1,72 @@
+// oxlint-disable typescript/no-explicit-any
 import { NodeHttpClient } from "@effect/platform-node"
-import { Codex } from "clanka"
-import { Layer, LayerMap, PlatformError, Schema } from "effect"
+import { Codex, Copilot } from "clanka"
+import { Effect, flow, Layer, LayerMap, Schema } from "effect"
 import { layerKvs } from "./Kvs.ts"
-import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai"
 
-export const CodexLayer: Layer.Layer<
-  OpenAiClient.OpenAiClient,
-  PlatformError.PlatformError
-> = Codex.layer.pipe(
-  Layer.provide(NodeHttpClient.layerUndici),
-  Layer.provide(layerKvs),
+export const ModelServices = NodeHttpClient.layerUndici.pipe(
+  Layer.merge(layerKvs),
 )
 
-export const clankaModels = {
-  "gpt-5.4-xhigh": OpenAiLanguageModel.model("gpt-5.4", {
-    reasoning: {
-      effort: "xhigh",
-      summary: "auto",
-    },
-  }).pipe(Layer.provideMerge(CodexLayer)),
-  "gpt-5.4-high": OpenAiLanguageModel.model("gpt-5.4", {
-    reasoning: {
-      effort: "high",
-      summary: "auto",
-    },
-  }).pipe(Layer.provideMerge(CodexLayer)),
-  "gpt-5.4-medium": OpenAiLanguageModel.model("gpt-5.4", {
-    reasoning: {
-      effort: "high",
-      summary: "auto",
-    },
-  }).pipe(Layer.provideMerge(CodexLayer)),
-} as const
-
-export type ClankaModel = keyof typeof clankaModels
-export const ClankaModel = Schema.Literals(
-  Object.keys(clankaModels) as ClankaModel[],
+const Reasoning = Schema.Literals(["low", "medium", "high", "xhigh"])
+const parseInput = flow(
+  Schema.decodeUnknownEffect(
+    Schema.Tuple([
+      Schema.Literals(["openai", "copilot"]),
+      Schema.String,
+      Reasoning,
+    ]),
+  ),
+  Effect.orDie,
 )
 
-export const clankaSubagent = OpenAiLanguageModel.model("gpt-5.4", {
-  reasoning: {
-    effort: "low",
-    summary: "auto",
-  },
-}).pipe(Layer.provideMerge(CodexLayer))
+export const clankaSubagent = Effect.fnUntraced(function* (
+  models: ClankaModels["Service"],
+  input: string,
+) {
+  const [provider, model] = yield* parseInput(input.split("/"))
+  return models.get(`${provider}/${model}/low`)
+}, Layer.unwrap)
 
 export class ClankaModels extends LayerMap.Service<ClankaModels>()(
   "lalph/ClankaModels",
   {
-    layers: clankaModels,
+    dependencies: [ModelServices],
+    lookup: Effect.fnUntraced(function* (input: string) {
+      const [provider, model, reasoning] = yield* parseInput(input.split("/"))
+      switch (provider) {
+        case "openai": {
+          return Codex.model(model, {
+            reasoning: {
+              effort: reasoning,
+            },
+          })
+        }
+        case "copilot": {
+          return Copilot.model(model, {
+            ...reasoningToCopilotConfig(model, reasoning),
+          })
+        }
+      }
+    }, Layer.unwrap),
   },
 ) {}
+
+const reasoningToCopilotConfig = (
+  model: string,
+  reasoning: typeof Reasoning.Type,
+) => {
+  if (model.startsWith("claude")) {
+    switch (reasoning) {
+      case "low":
+        return {}
+      case "medium":
+        return { reasoningEffort: 4000 }
+      case "high":
+        return { thinking_budget: 16000 }
+      case "xhigh":
+        return { thinking_budget: 31999 }
+    }
+  }
+  return { reasoningEffort: reasoning }
+}
