@@ -1,6 +1,7 @@
 import { Agent, OutputFormatter } from "clanka"
 import { Duration, Effect, Stream } from "effect"
 import {
+  TaskChooseTools,
   TaskTools,
   TaskToolsHandlers,
   TaskToolsWithChoose,
@@ -22,9 +23,9 @@ export const runClanka = Effect.fnUntraced(
     const models = yield* ClankaModels
     const agent = yield* Agent.make({
       ...options,
-      tools: options.withChoose
-        ? TaskToolsWithChoose
-        : (TaskTools as unknown as typeof TaskToolsWithChoose),
+      tools: (options.withChoose
+        ? TaskChooseTools
+        : TaskTools) as unknown as typeof TaskToolsWithChoose,
       subagentModel: clankaSubagent(models, options.model),
     }).pipe(Effect.provide(models.get(options.model)))
 

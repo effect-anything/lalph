@@ -3,6 +3,7 @@ import {
   Effect,
   MutableRef,
   Option,
+  Random,
   Schema,
   ServiceMap,
   Struct,
@@ -11,6 +12,7 @@ import { Tool, Toolkit } from "effect/unstable/ai"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import { IssueSource } from "./IssueSource.ts"
 import { CurrentProjectId } from "./Settings.ts"
+import * as Yaml from "yaml"
 
 export class ChosenTaskDeferred extends ServiceMap.Reference(
   "lalph/TaskTools/ChosenTaskDeferred",
@@ -57,9 +59,6 @@ const toTaskListItem = (issue: PrdIssue) => ({
   blockedBy: issue.blockedBy,
 })
 
-const sortByPriority = (issues: ReadonlyArray<PrdIssue>) =>
-  issues.toSorted((a, b) => a.priority - b.priority)
-
 export class TaskTools extends Toolkit.make(
   Tool.make("listTasks", {
     description: "Returns the current list of tasks.",
@@ -98,22 +97,25 @@ export class TaskTools extends Toolkit.make(
   }),
 ) {}
 
+export class TaskChooseTools extends Toolkit.make(
+  Tool.make("chooseTask", {
+    description: "Choose the task to work on",
+    parameters: Schema.Struct({
+      taskId: Schema.String,
+      githubPrNumber: Schema.optional(Schema.Number),
+    }),
+  }),
+  Tool.make("listEligibleTasks", {
+    description:
+      "List tasks eligible for being chosen with chooseTask in yaml format.",
+    success: Schema.String,
+    dependencies: [CurrentProjectId],
+  }),
+) {}
+
 export class TaskToolsWithChoose extends Toolkit.merge(
   TaskTools,
-  Toolkit.make(
-    Tool.make("chooseTask", {
-      description: "Choose the task to work on",
-      parameters: Schema.Struct({
-        taskId: Schema.String,
-        githubPrNumber: Schema.optional(Schema.Number),
-      }),
-    }),
-    Tool.make("listEligibleTasks", {
-      description: "List tasks eligible for being chosen with chooseTask, pre-sorted by priority.",
-      success: TaskList,
-      dependencies: [CurrentProjectId],
-    }),
-  ),
+  TaskChooseTools,
 ) {}
 
 export const TaskToolsHandlers = TaskToolsWithChoose.toLayer(
@@ -130,10 +132,11 @@ export const TaskToolsHandlers = TaskToolsWithChoose.toLayer(
       listEligibleTasks: Effect.fn("TaskTools.listEligibleTasks")(function* () {
         yield* Effect.log(`Calling "listEligibleTasks"`)
         const projectId = yield* CurrentProjectId
-        const tasks = yield* source.issues(projectId)
-        return sortByPriority(
-          tasks.filter((t) => t.blockedBy.length === 0 && t.state === "todo"),
-        ).map(toTaskListItem)
+        const tasks = (yield* source.issues(projectId))
+          .filter((t) => t.state === "todo" && t.blockedBy.length === 0)
+          .map(toTaskListItem)
+        const shuffled = yield* Random.shuffle(tasks)
+        return Yaml.stringify(shuffled, null, 2)
       }, Effect.orDie),
       chooseTask: Effect.fn("TaskTools.chooseTask")(function* (options) {
         yield* Effect.log(`Calling "chooseTask"`).pipe(

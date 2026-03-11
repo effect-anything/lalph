@@ -39,8 +39,8 @@ importers:
         specifier: 7.0.0-dev.20260310.1
         version: 7.0.0-dev.20260310.1
       clanka:
-        specifier: ^0.0.17
-        version: 0.0.17(@effect/ai-openai-compat@4.0.0-beta.30(effect@4.0.0-beta.30))(@effect/ai-openai@4.0.0-beta.30(effect@4.0.0-beta.30))(effect@4.0.0-beta.30)
+        specifier: ^0.0.20
+        version: 0.0.20(@effect/ai-openai-compat@4.0.0-beta.30(effect@4.0.0-beta.30))(@effect/ai-openai@4.0.0-beta.30(effect@4.0.0-beta.30))(effect@4.0.0-beta.30)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -663,8 +663,8 @@ packages:
     resolution: {integrity: sha512-g1Hi6V5YTYLzh4cf9yJwUMLmnFvqhqe/5V/rZ6Lx70P4BwSW5QuQBcXQMPWSD9CpsiO/xbhGfmtHZaxClAzosw==}
     hasBin: true
 
-  '@vscode/ripgrep@1.17.0':
-    resolution: {integrity: sha512-mBRKm+ASPkUcw4o9aAgfbusIu6H4Sdhw09bjeP1YOBFTJEZAnrnk6WZwzv8NEjgC82f7ILvhmb1WIElSugea6g==}
+  '@vscode/ripgrep@1.17.1':
+    resolution: {integrity: sha512-xTs7DGyAO3IsJYOCTBP8LnTvPiYVKEuyv8s0xyJDBXfs8rhBfqnZPvb6xDT+RnwWzcXqW27xLS/aGrkjX7lNWw==}
 
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
@@ -755,8 +755,8 @@ packages:
   chardet@2.1.1:
     resolution: {integrity: sha512-PsezH1rqdV9VvyNhxxOW32/d75r01NY7TQCmOqomRo15ZSOKbpTFVsfjghxo6JloQUCGnH4k1LGu0R4yCLlWQQ==}
 
-  clanka@0.0.17:
-    resolution: {integrity: sha512-SJlGLbppubTQxJqhul7jfWbroOt6iNZXnvaceBcWE9tAb3HWZYTi44JMXMmrZUABZvNYq1bNRWumPfhI45tvew==}
+  clanka@0.0.20:
+    resolution: {integrity: sha512-5icJRINHtH/Dotv0RQtjP8Wwq333yRU9iXlKB3irWWjTV6WXQX26wnmW3KunxgxiU/P8lhrQ56Yt3O4Dz3wQHg==}
     peerDependencies:
       '@effect/ai-openai': 4.0.0-beta.30
       '@effect/ai-openai-compat': 4.0.0-beta.30
@@ -2172,7 +2172,7 @@ snapshots:
       '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260310.1
       '@typescript/native-preview-win32-x64': 7.0.0-dev.20260310.1
 
-  '@vscode/ripgrep@1.17.0':
+  '@vscode/ripgrep@1.17.1':
     dependencies:
       https-proxy-agent: 7.0.6
       proxy-from-env: 1.1.0
@@ -2247,11 +2247,11 @@ snapshots:
 
   chardet@2.1.1: {}
 
-  clanka@0.0.17(@effect/ai-openai-compat@4.0.0-beta.30(effect@4.0.0-beta.30))(@effect/ai-openai@4.0.0-beta.30(effect@4.0.0-beta.30))(effect@4.0.0-beta.30):
+  clanka@0.0.20(@effect/ai-openai-compat@4.0.0-beta.30(effect@4.0.0-beta.30))(@effect/ai-openai@4.0.0-beta.30(effect@4.0.0-beta.30))(effect@4.0.0-beta.30):
     dependencies:
       '@effect/ai-openai': 4.0.0-beta.30(effect@4.0.0-beta.30)
       '@effect/ai-openai-compat': 4.0.0-beta.30(effect@4.0.0-beta.30)
-      '@vscode/ripgrep': 1.17.0
+      '@vscode/ripgrep': 1.17.1
       chalk: 5.6.2
       effect: 4.0.0-beta.30
       glob: 13.0.6

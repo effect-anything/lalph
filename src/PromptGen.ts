@@ -97,7 +97,9 @@ The following instructions should be done without interaction or asking for perm
 
 - Decide which single task to work on next from "listEligibleTasks". This should
   be the task YOU decide as the most important to work on next, not just the
-  first task in the list.${
+  first task in the list.
+
+  **Make sure to read the task list in full** before choosing. DO NOT try to parse it first.${
     options.gitFlow.requiresGithubPr
       ? `
 - Check if there is an open Github PR for the chosen task. If there is, note the PR number for inclusion when calling "chooseTask".
