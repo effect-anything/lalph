@@ -178,6 +178,10 @@ const run = Effect.fnUntraced(
         pathService.join(worktree.directory, ".lalph", "feedback.md"),
         feedback,
       )
+    } else if (gitFlow.requiresGithubPr) {
+      const branchName = `lalph/${taskId.replace(/#/g, "").replace(/[^a-zA-Z0-9-_]/g, "-")}`
+      yield* worktree.exec`git branch -D ${branchName}`
+      yield* worktree.exec`git checkout -b ${branchName}`
     }
 
     const taskPreset = Option.getOrElse(
