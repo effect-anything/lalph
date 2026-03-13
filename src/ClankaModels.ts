@@ -27,12 +27,14 @@ export class ClankaModels extends LayerMap.Service<ClankaModels>()(
     lookup: Effect.fnUntraced(function* (input: string) {
       const [provider, model, reasoning] = yield* parseInput(input.split("/"))
       const layer = resolve(provider, model, reasoning)
-      if (reasoning === "low" || reasoning === "medium") {
+      if (reasoning === "low") {
         return layer
       }
       return Layer.merge(
         layer,
-        Agent.layerSubagentModel(resolve(provider, model, "medium")),
+        Agent.layerSubagentModel(
+          resolve(provider, model, reasoning === "medium" ? "low" : "medium"),
+        ),
       )
     }, Layer.unwrap),
   },
