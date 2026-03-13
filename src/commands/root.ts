@@ -513,60 +513,30 @@ const watchTaskState = Effect.fnUntraced(function* (options: {
   const registry = yield* AtomRegistry.AtomRegistry
   const projectId = yield* CurrentProjectId
 
-  yield* Effect.sleep(Duration.seconds(10))
-
   return yield* AtomRegistry.toStreamResult(
     registry,
     currentIssuesAtom(projectId),
   ).pipe(
+    Stream.retry(Schedule.forever),
+    Stream.orDie,
+    Stream.debounce(Duration.seconds(10)),
     Stream.runForEach((issues) => {
       const issue = issues.find((entry) => entry.id === options.issueId)
-      if (!issue) {
-        return verifyTaskStateFromSource({
-          issueId: options.issueId,
-        })
-      }
-      if (issue.state === "in-progress" || issue.state === "in-review") {
+      if (
+        !issue ||
+        issue.state === "in-progress" ||
+        issue.state === "in-review"
+      ) {
         return Effect.void
       }
-      return verifyTaskStateFromSource({
-        issueId: options.issueId,
-      })
+      return Effect.fail(
+        new TaskStateChanged({
+          issueId: options.issueId,
+          state: issue.state,
+        }),
+      )
     }),
     Effect.withSpan("Main.watchTaskState"),
-  )
-})
-
-const verifyTaskStateFromSource = Effect.fnUntraced(function* (options: {
-  readonly issueId: string
-}) {
-  const source = yield* IssueSource
-  const projectId = yield* CurrentProjectId
-
-  const state = yield* source.issues(projectId).pipe(
-    Effect.map((issues) => {
-      const issue = issues.find((entry) => entry.id === options.issueId)
-      return issue ? issue.state : "missing"
-    }),
-    Effect.timeoutOrElse({
-      duration: "5 seconds",
-      onTimeout: () => Effect.succeed("unknown" as const),
-    }),
-    Effect.catchTag("IssueSourceError", () =>
-      Effect.logWarning(
-        `Failed to verify latest task state for ${options.issueId}; ignoring stale local state update.`,
-      ).pipe(Effect.as("unknown" as const)),
-    ),
-  )
-
-  if (state === "unknown") return
-  if (state === "in-progress" || state === "in-review") return
-
-  return yield* Effect.fail(
-    new TaskStateChanged({
-      issueId: options.issueId,
-      state,
-    }),
   )
 })
 
@@ -584,6 +554,7 @@ const taskUpdateSteer = Effect.fnUntraced(function* (options: {
     Stream.drop(1),
     Stream.retry(Schedule.forever),
     Stream.orDie,
+    Stream.debounce(Duration.seconds(10)),
     Stream.filterMap((issues) => {
       const issue = issues.find((entry) => entry.id === options.issueId)
       if (!issue) return Result.failVoid
