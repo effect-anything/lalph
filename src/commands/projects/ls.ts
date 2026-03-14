@@ -7,7 +7,7 @@ import { Settings } from "../../Settings.ts"
 
 export const commandProjectsLs = Command.make("ls").pipe(
   Command.withDescription(
-    "List configured projects and how they run (enabled state, concurrency, branch, git flow, review agent).",
+    "List configured projects and how they run (enabled state, concurrency, execution mode, branch, git flow, review agent).",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
@@ -29,6 +29,9 @@ export const commandProjectsLs = Command.make("ls").pipe(
         console.log(`  Enabled: ${project.enabled ? "Yes" : "No"}`)
         yield* source.info(project.id)
         console.log(`  Concurrency: ${project.concurrency}`)
+        console.log(
+          `  Execution mode: ${project.checkoutMode === "worktree" ? "Worktree" : "In place"}`,
+        )
         if (Option.isSome(project.targetBranch)) {
           console.log(`  Target Branch: ${project.targetBranch.value}`)
         }

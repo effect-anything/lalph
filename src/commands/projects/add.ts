@@ -5,7 +5,7 @@ import { Settings } from "../../Settings.ts"
 
 export const commandProjectsAdd = Command.make("add").pipe(
   Command.withDescription(
-    "Add a project and configure its execution settings (concurrency, target branch, git flow, review agent) and issue source settings.",
+    "Add a project and configure its execution settings (concurrency, execution mode, target branch, git flow, review agent) and issue source settings.",
   ),
   Command.withHandler(() => addOrUpdateProject()),
   Command.provide(Settings.layer),

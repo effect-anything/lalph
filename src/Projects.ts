@@ -8,7 +8,7 @@ import {
   Schema,
   String,
 } from "effect"
-import { Project, ProjectId } from "./domain/Project.ts"
+import { Project, ProjectCheckoutMode, ProjectId } from "./domain/Project.ts"
 import { CurrentProjectId, Setting, Settings } from "./Settings.ts"
 import { Prompt } from "effect/unstable/cli"
 import { IssueSource } from "./IssueSource.ts"
@@ -123,6 +123,30 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
       },
     ] as const,
   })
+  const checkoutMode = yield* Prompt.select({
+    message: "Execution mode",
+    choices: [
+      {
+        title: "Worktree",
+        description:
+          "Run each task in a temporary git worktree or jj workspace",
+        value: "worktree",
+        selected: existing ? existing.checkoutMode === "worktree" : true,
+      },
+      {
+        title: "In place",
+        description:
+          "Run directly in the current repository without a temporary checkout",
+        value: "in-place",
+        selected: existing ? existing.checkoutMode === "in-place" : false,
+      },
+    ] satisfies ReadonlyArray<{
+      readonly title: string
+      readonly description: string
+      readonly value: ProjectCheckoutMode
+      readonly selected: boolean
+    }>,
+  })
   const reviewAgent = yield* Prompt.toggle({
     message: "Enable review agent?",
     initial: existing ? existing.reviewAgent : true,
@@ -133,6 +157,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     enabled: existing ? existing.enabled : true,
     concurrency,
     targetBranch,
+    checkoutMode,
     gitFlow,
     reviewAgent,
   })

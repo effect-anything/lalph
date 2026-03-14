@@ -15,7 +15,7 @@ const subcommands = Command.withSubcommands([
 
 export const commandProjects = Command.make("projects").pipe(
   Command.withDescription(
-    "Manage projects and their execution settings (enabled state, concurrency, target branch, git flow, review agent). Use 'ls' to inspect and 'add', 'edit', or 'toggle' to configure.",
+    "Manage projects and their execution settings (enabled state, concurrency, execution mode, target branch, git flow, review agent). Use 'ls' to inspect and 'add', 'edit', or 'toggle' to configure.",
   ),
   Command.withAlias("p"),
   subcommands,
