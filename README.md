@@ -13,6 +13,7 @@ A LLM agent orchestrator driven by your chosen source of issues.
 - Agent presets to control which CLI agent and optional clanka model run tasks, with optional label-based routing
 - Plan mode to turn a high-level plan into a spec and generate PRD tasks
 - Git worktrees to support multiple concurrent iterations
+- Configurable lifecycle hooks for worktree setup, switching, and pre-merge validation
 - Optional PR flow with auto-merge and support for issue dependencies
 
 ## Installation
@@ -32,6 +33,8 @@ npx -y lalph@latest
 - Run the main loop across enabled projects: `lalph`
 - Run a bounded set of iterations per enabled project: `lalph --iterations 1`
 - Configure projects and per-project concurrency: `lalph projects add`
+- Inspect or dry-run configured lifecycle hooks: `lalph hooks list`
+- List, switch, or remove temporary worktrees and jj workspaces: `lalph worktree list`
 - Inspect and configure agent presets: `lalph agents ls`
 - Start plan mode: `lalph plan`
 - Create an issue from your editor: `lalph issue`
@@ -69,6 +72,107 @@ commands, you'll be prompted to choose an active project when needed.
 ```bash
 lalph projects add
 lalph projects toggle
+```
+
+## Worktree Management
+
+Use `lalph worktree` to inspect and clean up temporary git worktrees or jj
+workspaces outside the main task loop. This is useful when a previous run was
+interrupted and left extra checkouts behind.
+
+```bash
+lalph worktree list
+lalph worktree switch
+lalph worktree switch feature/my-branch
+lalph worktree rm
+lalph worktree rm feature/my-branch
+lalph worktree prune
+```
+
+`rm` accepts a branch name, workspace name, path, or path basename. If you omit
+it, lalph prompts you to choose a removable entry. `switch` opens a shell in an
+existing worktree or workspace after running `post-switch` hooks. `prune`
+removes stale entries whose directories are already gone.
+
+## Hooks
+
+Project-level hooks live in `.lalph/hooks.yml`. They let you run shell commands
+after a worktree is created, before a PR is merged, and after switching to an
+existing PR.
+
+Hook sections:
+
+- `post-create`: prepare a new worktree or jj workspace
+- `pre-merge`: run validation before `gh pr merge`
+- `post-switch`: refresh state after `lalph` checks out an existing PR
+
+Use these commands to inspect hook config and dry-run interpolated commands:
+
+```bash
+lalph hooks list
+lalph hooks test pre-merge
+```
+
+Example `.lalph/hooks.yml`:
+
+```yaml
+hooks:
+  post-create:
+    install: "pnpm install --frozen-lockfile"
+  pre-merge:
+    validate: "pnpm check"
+  post-switch:
+    notify: "echo Switched to {{ workspace }}"
+```
+
+Optimized example that reuses files from the main worktree:
+
+```yaml
+hooks:
+  post-create:
+    deps: "cp --reflink=auto -r {{ main_worktree_path }}/node_modules . || pnpm install --frozen-lockfile"
+    env: "cp {{ main_worktree_path }}/.env.keys ."
+    repos: "cp --reflink=auto -r {{ main_worktree_path }}/.repos ."
+  pre-merge:
+    validate: "pnpm check"
+```
+
+Available template variables:
+
+- `{{ main_worktree_path }}`
+- `{{ worktree_path }}`
+- `{{ workspace }}`
+- `{{ project_id }}`
+- `{{ target_branch }}`
+- `{{ repository_kind }}`
+
+Hook commands also receive matching `LALPH_*` environment variables, including
+`LALPH_MAIN_WORKTREE_PATH`, `LALPH_WORKTREE_PATH`, and `LALPH_WORKSPACE_NAME`.
+When lalph creates or switches into a temporary worktree/workspace, it also
+syncs shared `.lalph/config`, `.lalph/projects`, and `.lalph/hooks.yml` into
+that execution directory.
+
+Migration from `scripts/worktree-setup.sh`:
+
+If `.lalph/hooks.yml` is missing, lalph still falls back to the legacy
+`scripts/worktree-setup.sh`. Once `.lalph/hooks.yml` exists, it takes
+precedence and the legacy setup script is ignored.
+
+Before:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+pnpm install
+```
+
+After:
+
+```yaml
+hooks:
+  post-create:
+    install: "pnpm install"
 ```
 
 ## Plan mode
