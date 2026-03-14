@@ -32,6 +32,7 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.30.0",
+    "@effect/ai-anthropic": "4.0.0-beta.31",
     "@effect/ai-openai": "4.0.0-beta.31",
     "@effect/ai-openai-compat": "4.0.0-beta.31",
     "@effect/language-service": "^0.80.0",
