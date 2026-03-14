@@ -1,5 +1,27 @@
 # lalph
 
+## 0.3.61
+
+### Patch Changes
+
+- [`93a7be2`](https://github.com/effect-anything/lalph/commit/93a7be295e6f8ebdbbc5d058e557d151a784d9c5) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Add post-create hook execution during worktree setup, with `.lalph/hooks.yml` taking precedence over the legacy `scripts/worktree-setup.sh` fallback. Hook commands now run in sorted order with template interpolation, inherited `LALPH_*` environment variables, and strict failure handling.
+
+- [`93a7be2`](https://github.com/effect-anything/lalph/commit/93a7be295e6f8ebdbbc5d058e557d151a784d9c5) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Run configured `pre-merge` hooks before `gh pr merge` during GitFlow PR auto-merge, and abort the merge when any hook command fails.
+
+- [`93a7be2`](https://github.com/effect-anything/lalph/commit/93a7be295e6f8ebdbbc5d058e557d151a784d9c5) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Run configured `post-switch` hooks after successful PR checkout and workspace switching, and fail the switch when any hook command exits non-zero.
+
+- [`93a7be2`](https://github.com/effect-anything/lalph/commit/93a7be295e6f8ebdbbc5d058e557d151a784d9c5) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Add `lalph hooks list` and `lalph hooks test <hook-type>` for inspecting and dry-running project hook configuration, and document `.lalph/hooks.yml` usage with examples plus migration guidance from `scripts/worktree-setup.sh`.
+
+- [`93a7be2`](https://github.com/effect-anything/lalph/commit/93a7be295e6f8ebdbbc5d058e557d151a784d9c5) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Add the initial hooks configuration infrastructure, including schema validation for `.lalph/hooks.yml`, YAML-backed config loading, and template interpolation helpers for upcoming worktree hook execution.
+
+- [`93a7be2`](https://github.com/effect-anything/lalph/commit/93a7be295e6f8ebdbbc5d058e557d151a784d9c5) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Add support for running lalph inside Jujutsu (`jj`) repositories, including GitHub repo detection, worktree/workspace setup, explicit per-project execution mode selection (`worktree` vs `in-place`), jj-aware push flows, and automatic task change preparation that reuses an empty current change before creating a new one. Also add `openai-api` and `anthropic-api` clanka providers for local API-compatible model backends
+
+- [`fa8be97`](https://github.com/effect-anything/lalph/commit/fa8be97e79c83aca75d8a8df8a79277a3bd5070c) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Migrate repository to effect-anything organization and consolidate branches
+
+- [`93a7be2`](https://github.com/effect-anything/lalph/commit/93a7be295e6f8ebdbbc5d058e557d151a784d9c5) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Inject `LALPH_*` hook context into worktree command helpers and the legacy worktree setup script so hooks and setup commands can access repository and workspace metadata consistently.
+
+- [`93a7be2`](https://github.com/effect-anything/lalph/commit/93a7be295e6f8ebdbbc5d058e557d151a784d9c5) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Add `lalph worktree list`, `lalph worktree switch`, `lalph worktree rm`, and `lalph worktree prune` so temporary git worktrees and jj workspaces can be inspected, opened with post-switch hooks, and removed outside the main task loop. Temporary execution directories now also sync shared `.lalph/config`, `.lalph/projects`, and `.lalph/hooks.yml`.
+
 ## 0.3.53
 
 ### Patch Changes
