@@ -18,24 +18,28 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      id-token: write
+      id-token: write # Required for provenance and trusted publishing
       packages: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Install dependencies
         uses: ./.github/actions/setup
-      - run: pnpm check
-      - run: pnpm build
-      - name: Upgrade npm for OIDC support
-        run: npm install -g npm@latest
+
+      - name: Run checks
+        run: pnpm check
+
+      - name: Build
+        run: pnpm build
+
       - name: Create Release Pull Request or Publish
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: pnpm changeset publish
+          publish: pnpm exec changeset publish --provenance
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # No NPM_TOKEN needed with trusted publishing!

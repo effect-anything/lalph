@@ -234,3 +234,18 @@ lalph i
 - Install dependencies: `pnpm install`
 - Build the CLI: `pnpm build`
 - Run validations: `pnpm check`
+
+## Publishing
+
+This package uses **NPM Trusted Publishing** with provenance for secure, automated releases. No NPM tokens required!
+
+See [.github/NPM_TRUSTED_PUBLISHING.md](.github/NPM_TRUSTED_PUBLISHING.md) for setup instructions.
+
+### Release Process
+
+1. Create a changeset: `pnpm changeset`
+2. Commit and push to `main`
+3. GitHub Actions automatically creates a "Version Packages" PR
+4. Merge the PR to publish to npm with cryptographic provenance
+
+Every published package includes verifiable build attestation that users can check with `npm audit signatures`.
