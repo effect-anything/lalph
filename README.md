@@ -35,13 +35,13 @@ These features are experimental and opinionated. We maintain this fork separatel
 ## Installation
 
 ```bash
-npm install -g lalph
+npm install -g @effect-x/lalph
 ```
 
 or run with npx:
 
 ```bash
-npx -y lalph@latest
+npx -y @effect-x/lalph@latest
 ```
 
 ## CLI usage
