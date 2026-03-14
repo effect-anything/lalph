@@ -25,7 +25,7 @@ import { createServer } from "node:http"
 import { KeyValueStore } from "effect/unstable/persistence"
 import { layerKvs } from "../Kvs.ts"
 
-const clientId = "852ed0906088135c1f591d234a4eaa4b"
+const clientId = "6db56503e8594f7c4643dce4c37b4942"
 
 export class TokenManager extends ServiceMap.Service<TokenManager>()(
   "lalph/Linear/TokenManager",

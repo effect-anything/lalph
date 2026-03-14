@@ -760,7 +760,8 @@ export const GithubIssueSource = Layer.effect(
 )
 
 export class GithubRepoNotFound extends Data.TaggedError("GithubRepoNotFound") {
-  readonly message = "GitHub repository not found"
+  readonly message =
+    "GitHub repository not found for the current git or jj repo"
 }
 
 // == project filter

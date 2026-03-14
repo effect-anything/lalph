@@ -144,7 +144,9 @@ export class Prd extends ServiceMap.Service<
       }
     }
 
-    yield* Effect.addFinalizer(() => Effect.ignore(fs.remove(prdFile)))
+    if (worktree.mode === "worktree") {
+      yield* Effect.addFinalizer(() => Effect.ignore(fs.remove(prdFile)))
+    }
 
     yield* fs.writeFileString(
       prdFile,

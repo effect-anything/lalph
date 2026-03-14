@@ -14,28 +14,31 @@ import {
   GithubPullRequestData,
   ReviewComment,
 } from "../domain/GithubComment.ts"
+import { getCurrentRepository, getGithubRepository } from "../shared/vcs.ts"
 
 export class GithubCli extends ServiceMap.Service<GithubCli>()(
   "lalph/Github/Cli",
   {
     make: Effect.gen(function* () {
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-
-      const nameWithOwner =
-        yield* ChildProcess.make`gh repo view --json nameWithOwner -q ${".nameWithOwner"}`.pipe(
-          spawner.string,
-          Effect.option,
-          Effect.flatMap(
-            flow(
-              Option.map(String.trim),
-              Option.filter(String.isNonEmpty),
-              Option.match({
-                onNone: () => Effect.fail(new GithubCliRepoNotFound()),
-                onSome: (value) => Effect.succeed(value),
-              }),
+      const repository = yield* getCurrentRepository
+      const repositoryFromRemote = yield* getGithubRepository(repository)
+      const nameWithOwner = Option.isSome(repositoryFromRemote)
+        ? repositoryFromRemote.value
+        : yield* ChildProcess.make`gh repo view --json nameWithOwner -q ${".nameWithOwner"}`.pipe(
+            spawner.string,
+            Effect.option,
+            Effect.flatMap(
+              flow(
+                Option.map(String.trim),
+                Option.filter(String.isNonEmpty),
+                Option.match({
+                  onNone: () => Effect.fail(new GithubCliRepoNotFound()),
+                  onSome: (value) => Effect.succeed(value),
+                }),
+              ),
             ),
-          ),
-        )
+          )
       const [owner, repo] = nameWithOwner.split("/") as [string, string]
 
       const reviewComments = (pr: number) =>
@@ -141,7 +144,7 @@ export class GithubCliRepoNotFound extends Data.TaggedError(
   "GithubCliRepoNotFound",
 ) {
   readonly message =
-    "GitHub repository not found. Ensure the current directory is inside a git repo with a GitHub remote."
+    "GitHub repository not found. Ensure the current directory is inside a git or jj repo with a GitHub remote."
 }
 
 // markdown helper functions

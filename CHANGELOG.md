@@ -1,51 +1,5 @@
 # lalph
 
-## 0.3.60
-
-### Patch Changes
-
-- [#356](https://github.com/tim-smart/lalph/pull/356) [`450ded0`](https://github.com/tim-smart/lalph/commit/450ded07a7727b5cc4b1dcb81a11634fdd1024fb) Thanks [@tim-smart](https://github.com/tim-smart)! - Fix task-run cancellation races by verifying task state against the issue source before cancelling a worker.
-
-- [`311f190`](https://github.com/tim-smart/lalph/commit/311f190fe5f90a3c259d7bf65de8dd6442dab6f7) Thanks [@tim-smart](https://github.com/tim-smart)! - debounce task state watching
-
-## 0.3.59
-
-### Patch Changes
-
-- [`773346b`](https://github.com/tim-smart/lalph/commit/773346b6eefdefd4d234d82bc51e826a21baba23) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
-
-## 0.3.58
-
-### Patch Changes
-
-- [`39dc08f`](https://github.com/tim-smart/lalph/commit/39dc08ffee3541c656738c2ff7b43301aa728972) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
-
-## 0.3.57
-
-### Patch Changes
-
-- [`5ea5196`](https://github.com/tim-smart/lalph/commit/5ea5196cf735886abd4239b383274f16273fcddd) Thanks [@tim-smart](https://github.com/tim-smart)! - update dependencies
-
-## 0.3.56
-
-### Patch Changes
-
-- [`424ca7d`](https://github.com/tim-smart/lalph/commit/424ca7dbb8998b5c0006b0e82e2f4ca1081ae0ed) Thanks [@tim-smart](https://github.com/tim-smart)! - create task branch before starting worker
-
-## 0.3.55
-
-### Patch Changes
-
-- [`b4544e1`](https://github.com/tim-smart/lalph/commit/b4544e19ba0605fe960a1c4f4b36cc8d232759e1) Thanks [@tim-smart](https://github.com/tim-smart)! - increase subagent reasoning
-
-## 0.3.54
-
-### Patch Changes
-
-- [`818f5ac`](https://github.com/tim-smart/lalph/commit/818f5ac1af1d91f353d3d30c2870a006877fb0ed) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
-
-- [`03ce11e`](https://github.com/tim-smart/lalph/commit/03ce11ec74feff13244771fc8dd40113d4ec2ff3) Thanks [@tim-smart](https://github.com/tim-smart)! - improve pr instructions
-
 ## 0.3.53
 
 ### Patch Changes

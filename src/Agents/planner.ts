@@ -23,6 +23,7 @@ export const agentPlanner = Effect.fnUntraced(function* (options: {
     }),
     ChildProcess.setCwd(worktree.directory),
     options.preset.withCommandPrefix,
-    spawner.exitCode,
+    worktree.withRepositoryEnv,
+    Effect.flatMap((command) => command.pipe(spawner.exitCode)),
   )
 })
