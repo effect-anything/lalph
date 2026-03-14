@@ -1,24 +1,36 @@
 // oxlint-disable typescript/no-explicit-any
 import { NodeHttpClient } from "@effect/platform-node"
-import { Agent, Codex, Copilot } from "clanka"
+import { Codex, Copilot } from "clanka"
 import { Effect, flow, Layer, LayerMap, Schema } from "effect"
+import * as AnthropicApi from "./ClankaAnthropicApi.ts"
+import * as OpenAiApi from "./ClankaOpenAiApi.ts"
 import { layerKvs } from "./Kvs.ts"
 
-export const ModelServices = NodeHttpClient.layerUndici.pipe(
+export const ModelServices = NodeHttpClient.layerFetch.pipe(
   Layer.merge(layerKvs),
 )
 
 const Reasoning = Schema.Literals(["low", "medium", "high", "xhigh"])
+const Provider = Schema.Literals([
+  "openai",
+  "copilot",
+  "openai-api",
+  "anthropic-api",
+])
 const parseInput = flow(
   Schema.decodeUnknownEffect(
-    Schema.Tuple([
-      Schema.Literals(["openai", "copilot"]),
-      Schema.String,
-      Reasoning,
-    ]),
+    Schema.Tuple([Provider, Schema.String, Reasoning]),
   ),
   Effect.orDie,
 )
+
+export const clankaSubagent = Effect.fnUntraced(function* (
+  models: ClankaModels["Service"],
+  input: string,
+) {
+  const [provider, model] = yield* parseInput(input.split("/"))
+  return models.get(`${provider}/${model}/low`)
+}, Layer.unwrap)
 
 export class ClankaModels extends LayerMap.Service<ClankaModels>()(
   "lalph/ClankaModels",
@@ -26,40 +38,40 @@ export class ClankaModels extends LayerMap.Service<ClankaModels>()(
     dependencies: [ModelServices],
     lookup: Effect.fnUntraced(function* (input: string) {
       const [provider, model, reasoning] = yield* parseInput(input.split("/"))
-      const layer = resolve(provider, model, reasoning)
-      if (reasoning === "low") {
-        return layer
+      switch (provider) {
+        case "openai": {
+          return Codex.model(model, {
+            reasoning: {
+              effort: reasoning,
+            },
+          })
+        }
+        case "copilot": {
+          return Copilot.model(model, {
+            ...reasoningToCopilotConfig(model, reasoning),
+          })
+        }
+        case "openai-api": {
+          return OpenAiApi.model(model, {
+            reasoning: {
+              effort: reasoning,
+            },
+          })
+        }
+        case "anthropic-api": {
+          return AnthropicApi.model(model, {
+            cache_control: {
+              type: "ephemeral",
+            },
+            output_config: {
+              effort: reasoningToAnthropicEffort(reasoning),
+            },
+          })
+        }
       }
-      return Layer.merge(
-        layer,
-        Agent.layerSubagentModel(
-          resolve(provider, model, reasoning === "medium" ? "low" : "medium"),
-        ),
-      )
     }, Layer.unwrap),
   },
 ) {}
-
-const resolve = (
-  provider: "openai" | "copilot",
-  model: string,
-  reasoning: typeof Reasoning.Type,
-) => {
-  switch (provider) {
-    case "openai": {
-      return Codex.model(model, {
-        reasoning: {
-          effort: reasoning,
-        },
-      })
-    }
-    case "copilot": {
-      return Copilot.model(model, {
-        ...reasoningToCopilotConfig(model, reasoning),
-      })
-    }
-  }
-}
 
 const reasoningToCopilotConfig = (
   model: string,
@@ -78,4 +90,13 @@ const reasoningToCopilotConfig = (
     }
   }
   return { reasoningEffort: reasoning }
+}
+
+const reasoningToAnthropicEffort = (reasoning: typeof Reasoning.Type) => {
+  switch (reasoning) {
+    case "xhigh":
+      return "high" as const
+    default:
+      return reasoning
+  }
 }

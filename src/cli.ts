@@ -17,6 +17,8 @@ import { PlatformServices } from "./shared/platform.ts"
 import { commandProjects } from "./commands/projects.ts"
 import { commandSh } from "./commands/sh.ts"
 import { commandAgents } from "./commands/agents.ts"
+import { commandHooks } from "./commands/hooks.ts"
+import { commandWorktree } from "./commands/worktree.ts"
 import { ClankaModels } from "./ClankaModels.ts"
 
 commandRoot.pipe(
@@ -25,6 +27,8 @@ commandRoot.pipe(
     commandIssue,
     commandEdit,
     commandSh,
+    commandWorktree,
+    commandHooks,
     commandSource,
     commandAgents,
     commandProjects,
