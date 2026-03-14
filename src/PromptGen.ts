@@ -66,9 +66,8 @@ The following instructions should be done without interaction or asking for perm
     options.gitFlow.requiresGithubPr
       ? `
 - Check if there is an open Github PR for the chosen task. If there is, note the PR number for inclusion in the task.json file.
-  - If the task mentions a pull request, then use that instead
-  - Only include "open" PRs that are not yet merged.
-  - The pull request will contain the task id in the title or description.`
+   - Only include "open" PRs that are not yet merged.
+   - The pull request will contain the task id in the title or description.`
       : ""
   }
 - Once you have chosen a task, save its information in a "task.json" file alongside
@@ -101,17 +100,19 @@ Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
     options.gitFlow.requiresGithubPr
       ? `
 - Check if there is an open Github PR for the chosen task. If there is, note the PR number for inclusion when calling "chooseTask".
-  - If the task mentions a pull request, then use that instead
-  - Only include "open" PRs that are not yet merged.
-  - The pull request will contain the task id in the title or description.`
+   - Only include "open" PRs that are not yet merged.
+   - The pull request will contain the task id in the title or description.`
       : ""
   }
 - Use the "chooseTask" function to select the task you have chosen.
-${
-  options.gitFlow.requiresGithubPr
-    ? `\n  - Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.`
-    : "\n  Leave `githubPrNumber` as null."
-}
+\`\`\`${
+        options.gitFlow.requiresGithubPr
+          ? `
+
+Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
+`
+          : "\n\nLeave `githubPrNumber` as null."
+      }
 `
 
       const keyInformation = (options: {
@@ -135,6 +136,7 @@ do not wait until the end of the task. Things to record include:
   - If it took multiple attempts to get something working, record what worked.
   - If you found a library api was renamed or moved, record the new name.
 - Any other information that could help future work on similar tasks.
+- Write all newly added task notes and descriptions in English.
 
 ## Handling blockers
 
@@ -163,6 +165,7 @@ do not wait until the end of the task. Things to record include:
   - If it took multiple attempts to get something working, record what worked.
   - If you found a library api was renamed or moved, record the new name.
 - Any other information that could help future work on similar tasks.
+- Write all newly added task notes and descriptions in English.
 
 ## Handling blockers
 
@@ -178,22 +181,24 @@ ${taskGuidelines(options)}`
         readonly specsDirectory: string
         readonly githubPrNumber: number | undefined
         readonly gitFlow: GitFlow["Service"]
-      }) => `# ${options.task.title}
+      }) => `# The task
 
-Task ID: ${options.task.id}
+ID: ${options.task.id}
+Task: ${options.task.title}
+Description:
 
 ${options.task.description}
 
-### Instructions
+# Instructions
 
-Your job is to implement the task described above.${
-        options.task.description.includes(options.specsDirectory)
-          ? `\nMake sure to review the prd.yml for any key information that may help you with this task.`
-          : ""
-      }
+Your job is to implement the task described above.
 
-1. ${options.gitFlow.setupInstructions(options)}
-2. Implement the task.
+1. Carefully study the prd.yml file to understand the context of the task, and
+   discover any key learnings from previous work.
+   Also read the ${options.specsDirectory}/README.md file (if available), to see
+   if any previous specifications could assist you.
+2. ${options.gitFlow.setupInstructions(options)}
+3. Implement the task.
    - If this task is a research task, **do not** make any code changes yet.
    - If this task is a research task and you add follow-up tasks, include (at least) "${options.task.id}" in the new task's \`blockedBy\` field.
    - **If at any point** you discover something that needs fixing, or another task
@@ -201,14 +206,16 @@ Your job is to implement the task described above.${
      you plan to fix it as part of this task.
    - Add important discoveries about the codebase, or challenges faced to the task's
      \`description\`. More details below.
-3. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-4. ${options.gitFlow.commitInstructions({
+   - Write any new or updated task descriptions, notes, PR text, and commit / jj descriptions in English.
+4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
+5. ${options.gitFlow.commitInstructions({
         githubPrInstructions: sourceMeta.githubPrInstructions,
         githubPrNumber: options.githubPrNumber,
         taskId: options.task.id ?? "unknown",
         targetBranch: options.targetBranch,
       })}
-5. **After ${options.gitFlow.requiresGithubPr ? "pushing" : "committing"}** your changes, update the prd.yml to reflect any changes in the task state.
+6. **After ${options.gitFlow.completionAction}**
+   your changes, update the prd.yml to reflect any changes in the task state.
    - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks. Make sure to preserve important information such as specification file references.
    - If you believe the task is complete, update the \`state\` to "in-review".
 
@@ -226,16 +233,16 @@ Task ID: ${options.task.id}
 
 ${options.task.description}
 
-### Instructions
+# Workflow
 
-All steps must be done before the task can be considered complete.${
-        options.task.description.includes(options.specsDirectory)
-          ? `\nMake sure to review the previous tasks (using "listTasks") for any key information that may help you with this task.`
-          : ""
-      }
+All steps must be done before the task can be considered complete.
 
-1. ${options.gitFlow.setupInstructions(options)}
-2. Implement the task.
+1. Carefully study the current task list to understand the context of the task, and
+   discover any key learnings from previous work.
+   Also read the ${options.specsDirectory}/README.md file (if available), to see
+   if any previous specifications could assist you.
+2. ${options.gitFlow.setupInstructions(options)}
+3. Implement the task.
    - If this task is a research task, **do not** make any code changes yet.
    - If this task is a research task and you add follow-up tasks, include (at least) "${options.task.id}" in the new task's \`blockedBy\` field.
    - **If at any point** you discover something that needs fixing, or another task
@@ -243,14 +250,16 @@ All steps must be done before the task can be considered complete.${
      as part of this task.
    - Add important discoveries about the codebase, or challenges faced to the task's
      \`description\`. More details below.
-3. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-4. ${options.gitFlow.commitInstructions({
+   - Write any new or updated task descriptions, notes, PR text, and commit / jj descriptions in English.
+4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
+5. ${options.gitFlow.commitInstructions({
         githubPrInstructions: sourceMeta.githubPrInstructions,
         githubPrNumber: options.githubPrNumber,
         taskId: options.task.id ?? "unknown",
         targetBranch: options.targetBranch,
       })}
-5. **After ${options.gitFlow.requiresGithubPr ? "pushing" : "committing"}** your changes, update current task to reflect any changes in the task state.
+6. **After ${options.gitFlow.completionAction}**
+   your changes, update current task to reflect any changes in the task state.
    - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks. Make sure to preserve important information such as specification file references.
    - If you believe the task is complete, update the \`state\` to "in-review".`
 

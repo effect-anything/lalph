@@ -23,6 +23,7 @@ import { Editor } from "../Editor.ts"
 import { selectCliAgentPreset } from "../Presets.ts"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { parseBranch } from "../shared/git.ts"
+import { targetBranchToJjRevision } from "../shared/vcs.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import { ClankaMuxerLayer } from "../Clanka.ts"
 
@@ -151,7 +152,7 @@ const plan = Effect.fnUntraced(
       preset: options.preset,
     })
 
-    if (!worktree.inExisting) {
+    if (worktree.mode === "worktree" && !worktree.inExisting) {
       yield* pipe(
         fs.copy(
           pathService.join(worktree.directory, options.specsDirectory),
@@ -201,22 +202,65 @@ const commitAndPushSpecification = Effect.fnUntraced(
         stderr: "inherit",
       }).pipe(spawner.exitCode)
 
-    const addCode = yield* git(["add", absSpecsDirectory])
-    if (addCode !== 0) {
-      return yield* new SpecGitError({
-        message: "Failed to stage specification changes.",
-      })
-    }
-
-    const commitCode = yield* git(["commit", "-m", "Update plan specification"])
-    if (commitCode !== 0) {
-      return yield* new SpecGitError({
-        message: "Failed to commit the generated specification changes.",
-      })
-    }
-
     const parsed = parseBranch(options.targetBranch)
-    yield* git(["push", parsed.remote, `HEAD:${parsed.branch}`])
+
+    if (worktree.repository.kind === "git") {
+      const addCode = yield* git(["add", absSpecsDirectory])
+      if (addCode !== 0) {
+        return yield* new SpecGitError({
+          message: "Failed to stage specification changes.",
+        })
+      }
+
+      const commitCode = yield* git([
+        "commit",
+        "-m",
+        "Update plan specification",
+      ])
+      if (commitCode !== 0) {
+        return yield* new SpecGitError({
+          message: "Failed to commit the generated specification changes.",
+        })
+      }
+
+      yield* git(["push", parsed.remote, `HEAD:${parsed.branch}`])
+      return
+    }
+
+    const describeCode =
+      yield* worktree.exec`jj describe --message ${"Update plan specification"}`
+    if (describeCode !== 0) {
+      return yield* new SpecGitError({
+        message: "Failed to describe the generated specification change.",
+      })
+    }
+
+    yield* worktree.exec`jj git fetch --remote ${parsed.remote} --branch ${parsed.branch}`
+    const rebaseCode =
+      yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjRevision(options.targetBranch)}`
+    if (rebaseCode !== 0) {
+      return yield* new SpecGitError({
+        message: "Failed to rebase the generated specification change.",
+      })
+    }
+
+    yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote}`
+    const bookmarkCode =
+      yield* worktree.exec`jj bookmark set ${parsed.branch} --revision ${"@"}`
+    if (bookmarkCode !== 0) {
+      return yield* new SpecGitError({
+        message:
+          "Failed to update the target bookmark for the specification change.",
+      })
+    }
+
+    const pushCode =
+      yield* worktree.exec`jj git push --remote ${parsed.remote} --bookmark ${parsed.branch}`
+    if (pushCode !== 0) {
+      return yield* new SpecGitError({
+        message: "Failed to push the generated specification change.",
+      })
+    }
   },
   Effect.ignore({ log: "Warn" }),
 )

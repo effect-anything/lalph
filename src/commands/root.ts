@@ -28,7 +28,7 @@ import {
   currentIssuesAtom,
   resetInProgress,
 } from "../CurrentIssueSource.ts"
-import { GithubCli } from "../Github/Cli.ts"
+import { GithubCli, GithubCliRepoNotFound } from "../Github/Cli.ts"
 import { agentWorker } from "../Agents/worker.ts"
 import { agentChooser, ChosenTaskNotFound } from "../Agents/chooser.ts"
 import { RunnerStalled, TaskStateChanged } from "../domain/Errors.ts"
@@ -58,6 +58,9 @@ import { ClankaMuxerLayer } from "../Clanka.ts"
 
 // Main iteration run logic
 
+const jjTaskMessage = (task: PrdIssue) =>
+  task.id ? `${task.id} ${task.title}` : task.title
+
 const run = Effect.fnUntraced(
   function* (options: {
     readonly startedDeferred: Deferred.Deferred<void>
@@ -76,12 +79,12 @@ const run = Effect.fnUntraced(
     | ChosenTaskNotFound
     | RunnerStalled
     | TimeoutError
-    | AiError,
+    | AiError
+    | GithubCliRepoNotFound,
     | CurrentProjectId
     | ChildProcessSpawner.ChildProcessSpawner
     | Settings
     | Reactivity.Reactivity
-    | GithubCli
     | IssueSource
     | Prompt.Environment
     | AtomRegistry.AtomRegistry
@@ -98,7 +101,6 @@ const run = Effect.fnUntraced(
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
-    const gh = yield* GithubCli
     const prd = yield* Prd
     const source = yield* IssueSource
     const gitFlow = yield* GitFlow
@@ -110,6 +112,8 @@ const run = Effect.fnUntraced(
     // ensure cleanup of branch after run
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* () {
+        if (worktree.mode !== "worktree") return
+
         const currentBranchName = yield* worktree
           .currentBranch(worktree.directory)
           .pipe(Effect.option, Effect.map(Option.getOrUndefined))
@@ -162,6 +166,22 @@ const run = Effect.fnUntraced(
     yield* prd.setChosenIssueId(taskId)
     yield* prd.setAutoMerge(chosenTask.prd.autoMerge)
 
+    if (
+      worktree.mode === "in-place" &&
+      worktree.repository.kind === "jj" &&
+      !gitFlow.requiresGithubPr
+    ) {
+      const taskMessage = jjTaskMessage(chosenTask.prd)
+      const startCode = (yield* worktree.jjWorkingCopyEmpty(worktree.directory))
+        ? yield* worktree.exec`jj describe -m ${taskMessage}`
+        : yield* worktree.exec`jj new -m ${taskMessage}`
+      if (startCode !== 0) {
+        return yield* new GitFlowError({
+          message: `Failed to prepare a jj change for task ${taskId}.`,
+        })
+      }
+    }
+
     yield* source.ensureInProgress(projectId, taskId).pipe(
       Effect.timeoutOrElse({
         duration: "1 minute",
@@ -172,16 +192,15 @@ const run = Effect.fnUntraced(
     yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
     if (gitFlow.requiresGithubPr && chosenTask.githubPrNumber) {
-      yield* worktree.exec`gh pr checkout ${chosenTask.githubPrNumber}`
-      const feedback = yield* gh.prFeedbackMd(chosenTask.githubPrNumber)
+      yield* worktree.checkoutPr(chosenTask.githubPrNumber)
+      const feedback = yield* Effect.gen(function* () {
+        const gh = yield* GithubCli
+        return yield* gh.prFeedbackMd(chosenTask.githubPrNumber!)
+      }).pipe(Effect.provide(GithubCli.layer))
       yield* fs.writeFileString(
         pathService.join(worktree.directory, ".lalph", "feedback.md"),
         feedback,
       )
-    } else if (gitFlow.requiresGithubPr) {
-      const branchName = `lalph/${taskId.replace(/#/g, "").replace(/[^a-zA-Z0-9-_]/g, "-")}`
-      yield* worktree.exec`git branch -D ${branchName}`
-      yield* worktree.exec`git checkout -b ${branchName}`
     }
 
     const taskPreset = Option.getOrElse(
@@ -497,7 +516,6 @@ export const commandRoot = Command.make("lalph", {
       Effect.provide([
         ClankaMuxerLayer,
         PromptGen.layer,
-        GithubCli.layer,
         Settings.layer,
         CurrentIssueSource.layer,
         AtomRegistry.layer,
@@ -513,20 +531,23 @@ const watchTaskState = Effect.fnUntraced(function* (options: {
   const registry = yield* AtomRegistry.AtomRegistry
   const projectId = yield* CurrentProjectId
 
+  yield* Effect.sleep(Duration.seconds(10))
+
   return yield* AtomRegistry.toStreamResult(
     registry,
     currentIssuesAtom(projectId),
   ).pipe(
-    Stream.retry(Schedule.forever),
-    Stream.orDie,
-    Stream.debounce(Duration.seconds(10)),
     Stream.runForEach((issues) => {
       const issue = issues.find((entry) => entry.id === options.issueId)
-      if (
-        !issue ||
-        issue.state === "in-progress" ||
-        issue.state === "in-review"
-      ) {
+      if (!issue) {
+        return Effect.fail(
+          new TaskStateChanged({
+            issueId: options.issueId,
+            state: "missing",
+          }),
+        )
+      }
+      if (issue.state === "in-progress" || issue.state === "in-review") {
         return Effect.void
       }
       return Effect.fail(
@@ -554,7 +575,6 @@ const taskUpdateSteer = Effect.fnUntraced(function* (options: {
     Stream.drop(1),
     Stream.retry(Schedule.forever),
     Stream.orDie,
-    Stream.debounce(Duration.seconds(10)),
     Stream.filterMap((issues) => {
       const issue = issues.find((entry) => entry.id === options.issueId)
       if (!issue) return Result.failVoid

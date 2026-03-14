@@ -1,13 +1,32 @@
-import { Data, Duration, Effect, Layer, Option, ServiceMap } from "effect"
-import { IssueSource, type IssueSourceError } from "./IssueSource.ts"
+import {
+  Data,
+  Duration,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Schema,
+  ServiceMap,
+} from "effect"
 import type { PlatformError } from "effect/PlatformError"
-import type { Worktree } from "./Worktree.ts"
+import { Atom, AtomRegistry } from "effect/unstable/reactivity"
+import {
+  HookCommandFailedError,
+  Hooks,
+  HooksConfigParseError,
+} from "./Hooks.ts"
+import { IssueSource, type IssueSourceError } from "./IssueSource.ts"
 import { Prd } from "./Prd.ts"
-import { CurrentWorkerState } from "./Workers.ts"
-import { Atom } from "effect/unstable/reactivity"
-import { parseBranch } from "./shared/git.ts"
-import { AtomRegistry } from "effect/unstable/reactivity"
 import { CurrentProjectId } from "./Settings.ts"
+import { projectById } from "./Projects.ts"
+import type { Worktree } from "./Worktree.ts"
+import { CurrentWorkerState } from "./Workers.ts"
+import { parseBranch } from "./shared/git.ts"
+import {
+  getCurrentRepository,
+  targetBranchToJjRevision,
+  type VcsKind,
+} from "./shared/vcs.ts"
 
 // @effect-diagnostics-next-line leakingRequirements:off
 export class GitFlow extends ServiceMap.Service<
@@ -18,6 +37,7 @@ export class GitFlow extends ServiceMap.Service<
     readonly setupInstructions: (options: {
       readonly githubPrNumber: number | undefined
     }) => string
+    readonly completionAction: string
     readonly commitInstructions: (options: {
       readonly githubPrNumber: number | undefined
       readonly githubPrInstructions: string
@@ -41,7 +61,7 @@ export class GitFlow extends ServiceMap.Service<
     }) => Effect.Effect<
       void,
       IssueSourceError | PlatformError | GitFlowError,
-      Prd | IssueSource | CurrentProjectId
+      Prd | IssueSource | CurrentProjectId | FileSystem.FileSystem
     >
   }
 >()("lalph/GitFlow") {}
@@ -52,100 +72,241 @@ export type GitFlowLayer = Layer.Layer<
   Layer.Services<typeof GitFlowPR | typeof GitFlowCommit>
 >
 
-export const GitFlowPR = Layer.succeed(
-  GitFlow,
-  GitFlow.of({
-    requiresGithubPr: true,
-    branch: undefined,
+const setupInstructionsForPr = (
+  vcsKind: VcsKind,
+  githubPrNumber: number | undefined,
+) => {
+  if (githubPrNumber) {
+    return vcsKind === "git"
+      ? `The Github PR #${githubPrNumber} has been detected for this task and the branch has been checked out.
+   - Review feedback in the .lalph/feedback.md file.`
+      : `The Github PR #${githubPrNumber} has been detected for this task and the workspace has been prepared on top of the PR branch.
+   - Review feedback in the .lalph/feedback.md file.`
+  }
 
-    setupInstructions: ({ githubPrNumber }) =>
-      githubPrNumber
-        ? `The Github PR #${githubPrNumber} has been detected for this task and the branch has been checked out.
-   - **REVIEW ALL FEEDBACK** in the .lalph/feedback.md file.`
-        : `You are currently on a new branch for this task. You do not need to checkout any other branches.`,
+  return vcsKind === "git"
+    ? `Create a new branch for the task using the format \`{task id}/description\`, using the current HEAD as the base (don't checkout any other branches first).`
+    : `Create a new jj bookmark for the task using the format \`{task id}/description\` and keep working in the current workspace.`
+}
 
-    commitInstructions: (
-      options,
-    ) => `${!options.githubPrNumber ? `Create a pull request for this task. If the target branch does not exist, create it first.` : "Commit and push your changes to the pull request."}
+const commitInstructionsForPr = (options: {
+  readonly githubPrInstructions: string
+  readonly githubPrNumber: number | undefined
+  readonly targetBranch: string | undefined
+  readonly vcsKind: VcsKind
+}) => {
+  const action =
+    options.vcsKind === "git"
+      ? !options.githubPrNumber
+        ? "Create a pull request for this task. If the target branch does not exist, create it first."
+        : "Commit and push your changes to the pull request."
+      : !options.githubPrNumber
+        ? "Push the task bookmark with jj and create a pull request for it. If the target branch does not exist, create it first."
+        : "Record the updated jj change, move the PR bookmark to `@`, and push it back to the same pull request branch."
+
+  const permissions =
+    options.vcsKind === "git"
+      ? "- You have full permission to push branches, create PRs or create git commits."
+      : "- You have full permission to create jj commits, move bookmarks, push bookmarks, and create PRs."
+
+  return `${action}
    ${options.githubPrInstructions}
-   The PR description should include a summary of the changes made.${options.targetBranch ? `\n   - The target branch for the PR should be \`${options.targetBranch}\`.` : ""}
+   The PR description should include a summary of the changes made.
+   - Write the PR title and description in English.${options.targetBranch ? `\n   - The target branch for the PR should be \`${options.targetBranch}\`.` : ""}
    - **DO NOT** commit any of the files in the \`.lalph\` directory.
-   - You have full permission to push branches, create PRs or create git commits.`,
+   ${permissions}`
+}
 
-    reviewInstructions: `You are already on the PR branch with their changes.
+const reviewInstructionsForPr = (vcsKind: VcsKind) =>
+  vcsKind === "git"
+    ? `You are already on the PR branch with their changes.
 After making any changes, commit and push them to the same pull request.
 
 - **DO NOT** commit any of the files in the \`.lalph\` directory.
-- You have full permission to push branches, create PRs or create git commits.`,
+- You have full permission to push branches, create PRs or create git commits.`
+    : `You are already in a jj workspace based on the PR branch.
+After making any changes, record them in jj, move the PR bookmark to \`@\`, and push it to the same pull request branch.
 
-    postWork: () => Effect.void,
-    autoMerge: Effect.fnUntraced(function* (options) {
-      const prd = yield* Prd
-      const source = yield* IssueSource
-      const projectId = yield* CurrentProjectId
-      const worktree = options.worktree
+- **DO NOT** commit any of the files in the \`.lalph\` directory.
+- You have full permission to create jj commits, move bookmarks, push bookmarks, and create PRs.`
 
-      let prState = (yield* worktree.viewPrState()).pipe(
-        Option.filter((pr) => pr.state === "OPEN"),
-      )
+const mapHookErrorToGitFlowError = <A, R>(
+  effect: Effect.Effect<
+    A,
+    | HookCommandFailedError
+    | HooksConfigParseError
+    | PlatformError
+    | Schema.SchemaError,
+    R
+  >,
+) =>
+  effect.pipe(
+    Effect.catchIf(
+      (error): error is HookCommandFailedError =>
+        error instanceof HookCommandFailedError,
+      (error) =>
+        Effect.fail(
+          new GitFlowError({
+            message: error.message,
+          }),
+        ),
+    ),
+    Effect.catchIf(
+      (error): error is HooksConfigParseError =>
+        error instanceof HooksConfigParseError,
+      (error) =>
+        Effect.fail(
+          new GitFlowError({
+            message: `Failed to load pre-merge hooks: ${error.message}`,
+          }),
+        ),
+    ),
+    Effect.catchIf(Schema.isSchemaError, (error) =>
+      Effect.fail(
+        new GitFlowError({
+          message: `Invalid hooks configuration: ${error.message}`,
+        }),
+      ),
+    ),
+  )
 
-      yield* Effect.log("PR state", prState)
-      if (Option.isNone(prState)) {
-        return yield* new GitFlowError({
-          message: `No open PR found for auto-merge.`,
-        })
-      }
-      if (options.targetBranch) {
-        yield* worktree.exec`gh pr edit --base ${options.targetBranch}`
-      }
-      yield* worktree.exec`gh pr merge -sd`
-      yield* Effect.sleep(Duration.seconds(3))
-      prState = yield* worktree.viewPrState(prState.value.number)
-      yield* Effect.log("PR state after merge", prState)
-      if (Option.isSome(prState) && prState.value.state === "MERGED") {
-        const issue = yield* prd.findById(options.issueId)
-        if (issue && issue.state !== "done") {
-          yield* source.updateIssue({
-            projectId,
-            issueId: options.issueId,
-            state: "done",
+export const GitFlowPR = Layer.effect(
+  GitFlow,
+  Effect.gen(function* () {
+    const repository = yield* getCurrentRepository
+    const hooks = yield* Hooks
+
+    return GitFlow.of({
+      requiresGithubPr: true,
+      branch: undefined,
+
+      setupInstructions: ({ githubPrNumber }) =>
+        setupInstructionsForPr(repository.kind, githubPrNumber),
+
+      completionAction: "pushing",
+
+      commitInstructions: (options) =>
+        commitInstructionsForPr({
+          githubPrInstructions: options.githubPrInstructions,
+          githubPrNumber: options.githubPrNumber,
+          targetBranch: options.targetBranch,
+          vcsKind: repository.kind,
+        }),
+
+      reviewInstructions: reviewInstructionsForPr(repository.kind),
+
+      postWork: () => Effect.void,
+      autoMerge: Effect.fnUntraced(function* (options) {
+        const prd = yield* Prd
+        const source = yield* IssueSource
+        const projectId = yield* CurrentProjectId
+        const worktree = options.worktree
+
+        let prState = (yield* worktree.viewPrState()).pipe(
+          Option.filter((pr) => pr.state === "OPEN"),
+        )
+
+        yield* Effect.log("PR state", prState)
+        if (Option.isNone(prState)) {
+          return yield* new GitFlowError({
+            message: `No open PR found for auto-merge.`,
           })
         }
-        return
-      }
-      yield* Effect.log("Flagging unmergable PR")
-      yield* prd.flagUnmergable({ issueId: options.issueId })
-      yield* worktree.exec`gh pr close -d`
-    }),
+        if (options.targetBranch) {
+          yield* worktree.exec`gh pr edit --base ${options.targetBranch}`
+        }
+        yield* mapHookErrorToGitFlowError(
+          hooks.executeHook({
+            directory: worktree.directory,
+            fallbackDirectory: worktree.repository.root,
+            hookType: "pre-merge",
+            runCommand: worktree.execShell,
+            templateValues: yield* worktree.getHookTemplateValues,
+          }),
+        )
+        yield* worktree.exec`gh pr merge -sd`
+        yield* Effect.sleep(Duration.seconds(3))
+        prState = yield* worktree.viewPrState(prState.value.number)
+        yield* Effect.log("PR state after merge", prState)
+        if (Option.isSome(prState) && prState.value.state === "MERGED") {
+          const issue = yield* prd.findById(options.issueId)
+          if (issue && issue.state !== "done") {
+            yield* source.updateIssue({
+              projectId,
+              issueId: options.issueId,
+              state: "done",
+            })
+          }
+          return
+        }
+        yield* Effect.log("Flagging unmergable PR")
+        yield* prd.flagUnmergable({ issueId: options.issueId })
+        yield* worktree.exec`gh pr close -d`
+      }),
+    })
   }),
-)
+).pipe(Layer.provideMerge(Hooks.layer))
 
 export const GitFlowCommit = Layer.effect(
   GitFlow,
   Effect.gen(function* () {
     const currentWorker = yield* CurrentWorkerState
+    const repository = yield* getCurrentRepository
     const workerState = yield* Atom.get(currentWorker.state)
+    const projectId = yield* CurrentProjectId
+    const project = yield* projectById(projectId)
+    const checkoutMode = Option.match(project, {
+      onNone: () => "worktree" as const,
+      onSome: (project) => project.checkoutMode,
+    })
 
     return GitFlow.of({
       requiresGithubPr: false,
-      branch: `lalph/worker-${workerState.id}`,
+      branch: `lalph/worker-${workerState.id}-${Date.now()}`,
 
       setupInstructions: () =>
-        `You are already on a new branch for this task. You do not need to checkout any other branches.`,
+        repository.kind === "git"
+          ? checkoutMode === "worktree"
+            ? `You are already in an isolated checkout for this task. Do not switch to another repository while working.`
+            : `Work directly on the current branch for this task. Do not create or switch to a temporary worktree.`
+          : checkoutMode === "worktree"
+            ? `You are already in an isolated jj workspace for this task. Do not switch workspaces while working.`
+            : `A jj change has already been created for this task in the current workspace. Work directly in that change and do not create or switch to a temporary workspace.`,
 
-      commitInstructions: (
-        options,
-      ) => `When you have completed your changes, **you must** commit them to the current local branch. Do not git push your changes or switch branches.
+      completionAction:
+        repository.kind === "git" ? "committing" : "updating the jj change",
+
+      commitInstructions: (options) =>
+        repository.kind === "git"
+          ? `When you have completed your changes, **you must** commit them to the current local branch. Do not git push your changes or switch branches.
    - Include \`References ${options.taskId}\` in each commit message.
+   - Write commit messages in English.
+   - **DO NOT** commit any of the files in the \`.lalph\` directory.`
+          : `When you have completed your changes, **you must** update the current jj change using \`jj describe -m\`. Do not use \`jj commit -m\`, do not push your changes, and do not switch workspaces.
+   - Keep the issue id and task title visible in the first line of the jj change description.
+   - Include \`References ${options.taskId}\` somewhere in the jj change description.
+   - Write the jj change description in English.
    - **DO NOT** commit any of the files in the \`.lalph\` directory.`,
 
-      reviewInstructions: `You are already on the branch with their changes.
+      reviewInstructions:
+        repository.kind === "git"
+          ? `You are already on the branch with their changes.
 After making any changes, **you must** commit them to the same branch.
 But you **do not** need to git push your changes or switch branches.
 
  - Include \`References {task id}\` in each commit message.
+ - Write commit messages in English.
  - **DO NOT** commit any of the files in the \`.lalph\` directory.
- - You have full permission to create git commits.`,
+ - You have full permission to create git commits.`
+          : `You are already on the jj change with their work.
+After making any changes, **you must** update the same jj change with \`jj describe -m\`.
+But you **do not** need to push your changes or switch workspaces, and you should not create a new jj change.
+
+ - Keep the issue id and task title visible in the first line of the jj change description.
+ - Include \`References {task id}\` in the jj change description.
+ - Write the jj change description in English.
+ - **DO NOT** commit any of the files in the \`.lalph\` directory.
+ - You have full permission to create jj commits.`,
 
       postWork: Effect.fnUntraced(function* ({
         worktree,
@@ -160,24 +321,57 @@ But you **do not** need to git push your changes or switch branches.
         const prd = yield* Prd
 
         const parsed = parseBranch(targetBranch)
-        yield* worktree.exec`git fetch ${parsed.remote}`
 
-        yield* worktree.exec`git restore --worktree .`
+        if (worktree.repository.kind === "git") {
+          yield* worktree.exec`git fetch ${parsed.remote}`
+          yield* worktree.exec`git restore --worktree .`
+
+          const rebaseResult =
+            yield* worktree.exec`git rebase ${parsed.branchWithRemote}`
+          if (rebaseResult !== 0) {
+            yield* prd.flagUnmergable({ issueId })
+            return yield* new GitFlowError({
+              message: `Failed to rebase onto ${parsed.branchWithRemote}. Aborting task.`,
+            })
+          }
+
+          const pushResult =
+            yield* worktree.exec`git push ${parsed.remote} ${`HEAD:${parsed.branch}`}`
+          if (pushResult !== 0) {
+            yield* prd.flagUnmergable({ issueId })
+            return yield* new GitFlowError({
+              message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
+            })
+          }
+          return
+        }
+
+        yield* worktree.exec`jj git fetch --remote ${parsed.remote} --branch ${parsed.branch}`
         const rebaseResult =
-          yield* worktree.exec`git rebase ${parsed.branchWithRemote}`
+          yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjRevision(targetBranch)}`
         if (rebaseResult !== 0) {
           yield* prd.flagUnmergable({ issueId })
           return yield* new GitFlowError({
-            message: `Failed to rebase onto ${parsed.branchWithRemote}. Aborting task.`,
+            message: `Failed to rebase onto ${targetBranchToJjRevision(targetBranch)}. Aborting task.`,
+          })
+        }
+
+        yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote}`
+        const setBookmarkResult =
+          yield* worktree.exec`jj bookmark set ${parsed.branch} --revision ${"@"}`
+        if (setBookmarkResult !== 0) {
+          yield* prd.flagUnmergable({ issueId })
+          return yield* new GitFlowError({
+            message: `Failed to update jj bookmark ${parsed.branch}. Aborting task.`,
           })
         }
 
         const pushResult =
-          yield* worktree.exec`git push ${parsed.remote} ${`HEAD:${parsed.branch}`}`
+          yield* worktree.exec`jj git push --remote ${parsed.remote} --bookmark ${parsed.branch}`
         if (pushResult !== 0) {
           yield* prd.flagUnmergable({ issueId })
           return yield* new GitFlowError({
-            message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
+            message: `Failed to push jj bookmark ${parsed.branch}@${parsed.remote}. Aborting task.`,
           })
         }
       }),
@@ -198,8 +392,6 @@ But you **do not** need to git push your changes or switch branches.
     })
   }),
 ).pipe(Layer.provide(AtomRegistry.layer))
-
-// Errors
 
 export class GitFlowError extends Data.TaggedError("GitFlowError")<{
   message: string
