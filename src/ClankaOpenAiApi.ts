@@ -1,11 +1,9 @@
 import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai"
-import { Effect, Layer, Redacted } from "effect"
 import { AgentModelConfig } from "clanka/Agent"
+import { Config, Effect, Layer } from "effect"
 import { Model } from "effect/unstable/ai"
 import type { LanguageModel } from "effect/unstable/ai/LanguageModel"
 import type { HttpClient } from "effect/unstable/http/HttpClient"
-
-const defaultApiUrl = "http://localhost:3333/openai"
 
 type AgentOptions = typeof AgentModelConfig.Service
 type ProviderOptions = OpenAiLanguageModel.Config["Service"]
@@ -26,21 +24,22 @@ const splitOptions = (options?: ModelOptions) => {
   }
 }
 
-const layerClient = Layer.unwrap(
-  Effect.sync(() => {
-    const apiUrl =
-      process.env.CLANKA_OPENAI_API_BASE_URL?.trim() || defaultApiUrl
-    const apiKey =
-      process.env.CLANKA_OPENAI_API_KEY?.trim() ??
-      "cr_88dbffab23ff47b04363a3a2720521ea4eaa5193816a64a8c396157540135c10"
+const OPENAI_API_BASE_UR = Config.string("OPENAI_API_BASE_UR")
+const OPENAI_API_KEY = Config.redacted("OPENAI_API_KEY")
 
-    return OpenAiClient.layer({
-      apiUrl,
-      apiKey: apiKey ? Redacted.make(apiKey) : undefined,
-    })
-  }),
+const layerClient = Layer.orDie(
+  Layer.unwrap(
+    Effect.gen(function* () {
+      const apiUrl = yield* OPENAI_API_BASE_UR
+      const apiKey = yield* OPENAI_API_KEY
+
+      return OpenAiClient.layer({
+        apiUrl: apiUrl,
+        apiKey: apiKey,
+      })
+    }),
+  ),
 )
-
 export const model = (
   model: (string & {}) | OpenAiLanguageModel.Model,
   options?: ModelOptions | undefined,

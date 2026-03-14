@@ -1,18 +1,13 @@
 import { AnthropicClient, AnthropicLanguageModel } from "@effect/ai-anthropic"
-import { Effect, Layer, Redacted } from "effect"
 import { AgentModelConfig } from "clanka/Agent"
+import { Config, Effect, Layer } from "effect"
 import { Model } from "effect/unstable/ai"
 import type { LanguageModel } from "effect/unstable/ai/LanguageModel"
 import type { HttpClient } from "effect/unstable/http/HttpClient"
 
-const defaultApiUrl = "http://localhost:3333/api"
-
 type AgentOptions = typeof AgentModelConfig.Service
 type ProviderOptions = AnthropicLanguageModel.Config["Service"]
 type ModelOptions = ProviderOptions & AgentOptions
-
-const normalizeApiUrl = (apiUrl: string) =>
-  apiUrl.replace(/\/v1(?:\/messages)?\/?$/, "")
 
 const splitOptions = (options?: ModelOptions) => {
   const {
@@ -29,19 +24,21 @@ const splitOptions = (options?: ModelOptions) => {
   }
 }
 
-const layerClient = Layer.unwrap(
-  Effect.sync(() => {
-    const apiUrl =
-      process.env.CLANKA_ANTHROPIC_API_BASE_URL?.trim() || defaultApiUrl
-    const apiKey =
-      process.env.CLANKA_ANTHROPIC_API_KEY?.trim() ??
-      "cr_e8609ef50af448b1a38a08af92ebc6c5d7589426597c1d12ef130ab832d50270"
+const ANTHROPIC_API_BASE_URL = Config.string("ANTHROPIC_API_BASE_URL")
+const ANTHROPIC_API_KEY = Config.redacted("ANTHROPIC_API_KEY")
 
-    return AnthropicClient.layer({
-      apiUrl: normalizeApiUrl(apiUrl),
-      apiKey: apiKey ? Redacted.make(apiKey) : undefined,
-    })
-  }),
+const layerClient = Layer.orDie(
+  Layer.unwrap(
+    Effect.gen(function* () {
+      const apiUrl = yield* ANTHROPIC_API_BASE_URL
+      const apiKey = yield* ANTHROPIC_API_KEY
+
+      return AnthropicClient.layer({
+        apiUrl: apiUrl,
+        apiKey: apiKey,
+      })
+    }),
+  ),
 )
 
 export const model = (
