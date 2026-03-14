@@ -6,6 +6,22 @@
 
 A LLM agent orchestrator driven by your chosen source of issues.
 
+> **Note:** This is a fork of [tim-smart/lalph](https://github.com/tim-smart/lalph) with extended worktree management and hooks system. Huge thanks to [@tim-smart](https://github.com/tim-smart) for creating this amazing tool!
+>
+> **Why a separate fork?** This branch adds experimental features (Jujutsu support, advanced worktree management, YAML-based hooks) that significantly extend the original design. Rather than burden the upstream with these opinionated additions, we maintain this fork for users who need these specific workflows. We continue to track upstream changes and merge improvements regularly.
+
+## What's Different from Upstream?
+
+This fork extends the original lalph with:
+
+- **Jujutsu (jj) Support**: Full VCS abstraction layer supporting both Git and Jujutsu workflows
+- **Advanced Worktree Management**: CLI commands for listing, switching, and cleaning up temporary worktrees/workspaces
+- **YAML-based Hooks System**: Declarative `.lalph/hooks.yml` configuration with template interpolation
+- **Project Execution Modes**: Choose between `worktree` (isolated) and `in-place` (direct) execution per project
+- **Additional AI Providers**: Support for Anthropic API and OpenAI API compatible backends
+
+These features are experimental and opinionated. We maintain this fork separately to avoid adding complexity to the upstream project while still benefiting from Tim's excellent foundation.
+
 ## Features
 
 - Pull work from an issue source (GitHub Issues, Linear, etc.) and keep task state in sync
