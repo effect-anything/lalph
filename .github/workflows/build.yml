@@ -42,4 +42,4 @@ jobs:
           publish: pnpm exec changeset publish --provenance
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # No NPM_TOKEN needed with trusted publishing!
+          NPM_CONFIG_PROVENANCE: "true"

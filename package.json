@@ -6,7 +6,7 @@
     "access": "public"
   },
   "bin": {
-    "lalph": "./dist/cli.mjs"
+    "lalph": "dist/cli.mjs"
   },
   "scripts": {
     "prepare": "husky && effect-language-service patch",
