@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.62
+
+### Patch Changes
+
+- [`3c54012`](https://github.com/effect-anything/lalph/commit/3c540126a0befee9c5dd386f2380ea134ac3aab6) Thanks [@xesrevinu](https://github.com/xesrevinu)! - update release config
+
 ## 0.3.61
 
 ### Patch Changes
