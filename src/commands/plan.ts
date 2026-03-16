@@ -23,7 +23,7 @@ import { Editor } from "../Editor.ts"
 import { selectCliAgentPreset } from "../Presets.ts"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { parseBranch } from "../shared/git.ts"
-import { targetBranchToJjRevision } from "../shared/vcs.ts"
+import { targetBranchToJjBookmark } from "../shared/vcs.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import { ClankaMuxerLayer } from "../Clanka.ts"
 
@@ -236,15 +236,14 @@ const commitAndPushSpecification = Effect.fnUntraced(
     }
 
     yield* worktree.exec`jj git fetch --remote ${parsed.remote} --branch ${parsed.branch}`
+    yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote}`
     const rebaseCode =
-      yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjRevision(options.targetBranch)}`
+      yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjBookmark(options.targetBranch)}`
     if (rebaseCode !== 0) {
       return yield* new SpecGitError({
         message: "Failed to rebase the generated specification change.",
       })
     }
-
-    yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote}`
     const bookmarkCode =
       yield* worktree.exec`jj bookmark set ${parsed.branch} --revision ${"@"}`
     if (bookmarkCode !== 0) {

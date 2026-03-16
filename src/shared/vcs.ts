@@ -127,6 +127,11 @@ export const targetBranchToJjRevision = (targetBranch: string) => {
   return `${parsed.branch}@${parsed.remote}`
 }
 
+export const targetBranchToJjBookmark = (targetBranch: string) => {
+  const parsed = parseBranch(targetBranch)
+  return parsed.branch
+}
+
 const parseGitRemoteConfig = (output: string): ReadonlyArray<RemoteUrl> =>
   output
     .split("\n")

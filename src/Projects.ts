@@ -8,7 +8,12 @@ import {
   Schema,
   String,
 } from "effect"
-import { Project, ProjectCheckoutMode, ProjectId } from "./domain/Project.ts"
+import {
+  Project,
+  ProjectCheckoutMode,
+  ProjectId,
+  ProjectReviewCompletion,
+} from "./domain/Project.ts"
 import { CurrentProjectId, Setting, Settings } from "./Settings.ts"
 import { Prompt } from "effect/unstable/cli"
 import { IssueSource } from "./IssueSource.ts"
@@ -151,6 +156,29 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     message: "Enable review agent?",
     initial: existing ? existing.reviewAgent : true,
   })
+  const reviewCompletion = yield* Prompt.select({
+    message: "When a loop finishes with the issue in review",
+    choices: [
+      {
+        title: "Leave in review",
+        description: "Keep the issue in review until you move it to done",
+        value: "manual",
+        selected: existing ? existing.reviewCompletion === "manual" : true,
+      },
+      {
+        title: "Auto-complete to done",
+        description:
+          "Automatically move review -> done at the end of a successful loop",
+        value: "auto-done",
+        selected: existing ? existing.reviewCompletion === "auto-done" : false,
+      },
+    ] satisfies ReadonlyArray<{
+      readonly title: string
+      readonly description: string
+      readonly value: ProjectReviewCompletion
+      readonly selected: boolean
+    }>,
+  })
 
   const project = new Project({
     id: ProjectId.makeUnsafe(id),
@@ -160,6 +188,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     checkoutMode,
     gitFlow,
     reviewAgent,
+    reviewCompletion,
   })
   yield* Settings.set(
     allProjects,

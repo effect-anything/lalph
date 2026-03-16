@@ -12,18 +12,45 @@ import {
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import test from "node:test"
-import { Effect, Option, Schema } from "effect"
-import { GitFlow, GitFlowError, GitFlowPR } from "./GitFlow.ts"
+import { Chunk, Effect, Option, Schema } from "effect"
+import { Atom } from "effect/unstable/reactivity"
+import { GitFlow, GitFlowCommit, GitFlowError, GitFlowPR } from "./GitFlow.ts"
 import { Hooks } from "./Hooks.ts"
 import { IssueSource } from "./IssueSource.ts"
 import { Prd } from "./Prd.ts"
-import { CurrentProjectId } from "./Settings.ts"
+import { CurrentProjectId, Settings } from "./Settings.ts"
 import { PlatformServices } from "./shared/platform.ts"
 import { type Worktree, makeExecHelpers } from "./Worktree.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
-import { ProjectId } from "./domain/Project.ts"
+import { Project, ProjectId } from "./domain/Project.ts"
+import { CurrentWorkerState } from "./Workers.ts"
+import { WorkerState } from "./domain/WorkerState.ts"
 
 const projectId = Schema.decodeUnknownSync(ProjectId)("AUT-71")
+
+const settingsWithProjects = (...projects: ReadonlyArray<Project>) =>
+  Settings.of({
+    get: (setting) =>
+      Effect.succeed(
+        setting.name === "projects" ? Option.some(projects) : Option.none(),
+      ),
+    getProject: () => Effect.succeed(Option.none()),
+    set: () => Effect.void,
+    setProject: () => Effect.void,
+  } as Settings["Service"])
+
+const withCurrentDirectory = async <A>(
+  directory: string,
+  run: () => Promise<A>,
+) => {
+  const previousDirectory = process.cwd()
+  process.chdir(directory)
+  try {
+    return await run()
+  } finally {
+    process.chdir(previousDirectory)
+  }
+}
 
 const makeGitDirectory = (branch: string) => {
   const directory = mkdtempSync(join(tmpdir(), "lalph-gitflow-"))
@@ -52,6 +79,10 @@ const makeJjDirectory = () => {
     stdio: "pipe",
   })
   execFileSync("git", ["config", "user.name", "Test User"], {
+    cwd: seedDirectory,
+    stdio: "pipe",
+  })
+  execFileSync("git", ["config", "commit.gpgsign", "false"], {
     cwd: seedDirectory,
     stdio: "pipe",
   })
@@ -425,4 +456,105 @@ exit 1
 
   assert.deepEqual(commands, [])
   assert.deepEqual(updates, [])
+})
+
+test("GitFlowCommit.postWork rebases jj changes onto the local bookmark for linear history", async (t) => {
+  const { directory, repositoryDirectory } = makeJjDirectory()
+  t.after(() => {
+    rmSync(directory, { force: true, recursive: true })
+  })
+
+  const project = new Project({
+    checkoutMode: "in-place",
+    concurrency: 1,
+    enabled: true,
+    gitFlow: "commit",
+    id: projectId,
+    reviewAgent: false,
+    reviewCompletion: "manual",
+    targetBranch: Option.some("origin/master"),
+  })
+
+  const commands: Array<string> = []
+  const worktree = {
+    directory: repositoryDirectory,
+    exec: (
+      template: TemplateStringsArray,
+      ...args: Array<string | number | boolean>
+    ) =>
+      Effect.sync(() => {
+        commands.push(String.raw({ raw: template }, ...args))
+        return 0
+      }),
+    repository: {
+      kind: "jj" as const,
+      root: repositoryDirectory,
+    },
+  } as unknown as Worktree["Service"]
+
+  await withCurrentDirectory(repositoryDirectory, () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const gitFlow = yield* GitFlow
+        yield* gitFlow.postWork({
+          issueId: "AUT-71",
+          targetBranch: "origin/master",
+          worktree,
+        })
+      }).pipe(
+        Effect.provide(GitFlowCommit),
+        Effect.provideService(CurrentProjectId, CurrentProjectId.of(projectId)),
+        Effect.provideService(
+          CurrentWorkerState,
+          CurrentWorkerState.of({
+            output: Atom.make(Chunk.empty<string>()),
+            state: Atom.make(
+              WorkerState.initial({
+                id: 1,
+                projectId,
+              }),
+            ),
+          }),
+        ),
+        Effect.provideService(Settings, settingsWithProjects(project)),
+        Effect.provideService(
+          Prd,
+          Prd.of({
+            findById: () => Effect.succeed(null),
+            flagUnmergable: () => Effect.void,
+            maybeRevertIssue: () => Effect.void,
+            path: join(repositoryDirectory, ".lalph", "prd.yml"),
+            revertUpdatedIssues: Effect.void,
+            setAutoMerge: () => Effect.void,
+            setChosenIssueId: () => Effect.void,
+          }),
+        ),
+        Effect.provideService(
+          IssueSource,
+          IssueSource.of({
+            cancelIssue: () => Effect.void,
+            cliAgentPresetInfo: () => Effect.void,
+            createIssue: () => Effect.die("unused"),
+            ensureInProgress: () => Effect.void,
+            info: () => Effect.void,
+            issueCliAgentPreset: () => Effect.succeed(Option.none()),
+            issues: () => Effect.succeed([]),
+            reset: Effect.void,
+            settings: () => Effect.void,
+            updateCliAgentPreset: () => Effect.die("unused"),
+            updateIssue: () => Effect.void,
+          }),
+        ),
+        Effect.provide(PlatformServices),
+      ),
+    ),
+  )
+
+  assert.deepEqual(commands, [
+    "jj git fetch --remote origin --branch master",
+    "jj bookmark track master --remote origin",
+    "jj rebase --branch @ --onto master",
+    "jj bookmark set master --revision @",
+    "jj git push --remote origin --bookmark master",
+  ])
 })

@@ -25,7 +25,7 @@ These features are experimental and opinionated. We maintain this fork separatel
 ## Features
 
 - Pull work from an issue source (GitHub Issues, Linear, etc.) and keep task state in sync
-- Projects to group execution settings (enabled state, concurrency, target branch, git flow, review agent)
+- Projects to group execution settings (enabled state, concurrency, target branch, git flow, review agent, review completion)
 - Agent presets to control which CLI agent and optional clanka model run tasks, with optional label-based routing
 - Plan mode to turn a high-level plan into a spec and generate PRD tasks
 - Git worktrees to support multiple concurrent iterations
@@ -80,7 +80,8 @@ extra args, command prefix, and any issue-source routing metadata.
 
 Projects bundle execution settings for the current repo: whether it is enabled
 for runs, how many tasks can run concurrently, which branch to target, what git
-flow to use, and whether review is enabled.
+flow to use, whether review is enabled, and whether successful loops should
+leave issues in review or automatically move them to done.
 
 `lalph` runs across all enabled projects in parallel; for single-project
 commands, you'll be prompted to choose an active project when needed.

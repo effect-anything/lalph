@@ -5,6 +5,8 @@ export const ProjectId = Schema.String.pipe(Schema.brand("lalph/ProjectId"))
 export type ProjectId = typeof ProjectId.Type
 export const ProjectCheckoutMode = Schema.Literals(["worktree", "in-place"])
 export type ProjectCheckoutMode = typeof ProjectCheckoutMode.Type
+export const ProjectReviewCompletion = Schema.Literals(["manual", "auto-done"])
+export type ProjectReviewCompletion = typeof ProjectReviewCompletion.Type
 
 export class Project extends Schema.Class<Project>("lalph/Project")({
   id: ProjectId,
@@ -14,4 +16,7 @@ export class Project extends Schema.Class<Project>("lalph/Project")({
   checkoutMode: ProjectCheckoutMode.pipe(withEncodeDefault(() => "worktree")),
   gitFlow: Schema.Literals(["pr", "commit"]),
   reviewAgent: Schema.Boolean,
+  reviewCompletion: ProjectReviewCompletion.pipe(
+    withEncodeDefault(() => "manual"),
+  ),
 }) {}

@@ -7,7 +7,7 @@ import { Settings } from "../../Settings.ts"
 
 export const commandProjectsLs = Command.make("ls").pipe(
   Command.withDescription(
-    "List configured projects and how they run (enabled state, concurrency, execution mode, branch, git flow, review agent).",
+    "List configured projects and how they run (enabled state, concurrency, execution mode, branch, git flow, review agent, review completion).",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
@@ -40,6 +40,9 @@ export const commandProjectsLs = Command.make("ls").pipe(
         )
         console.log(
           `  Review agent: ${project.reviewAgent ? "Enabled" : "Disabled"}`,
+        )
+        console.log(
+          `  Review completion: ${project.reviewCompletion === "auto-done" ? "Auto review -> done" : "Manual"}`,
         )
         console.log("")
       }

@@ -474,6 +474,7 @@ test(
       gitFlow: "commit",
       id: jjProjectId,
       reviewAgent: false,
+      reviewCompletion: "manual",
       targetBranch: Option.some("origin/release"),
     })
 
@@ -573,6 +574,7 @@ test(
       gitFlow: "commit",
       id: jjProjectId,
       reviewAgent: false,
+      reviewCompletion: "manual",
       targetBranch: Option.none(),
     })
 

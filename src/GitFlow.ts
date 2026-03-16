@@ -24,7 +24,7 @@ import { CurrentWorkerState } from "./Workers.ts"
 import { parseBranch } from "./shared/git.ts"
 import {
   getCurrentRepository,
-  targetBranchToJjRevision,
+  targetBranchToJjBookmark,
   type VcsKind,
 } from "./shared/vcs.ts"
 
@@ -347,16 +347,15 @@ But you **do not** need to push your changes or switch workspaces, and you shoul
         }
 
         yield* worktree.exec`jj git fetch --remote ${parsed.remote} --branch ${parsed.branch}`
+        yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote}`
         const rebaseResult =
-          yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjRevision(targetBranch)}`
+          yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjBookmark(targetBranch)}`
         if (rebaseResult !== 0) {
           yield* prd.flagUnmergable({ issueId })
           return yield* new GitFlowError({
-            message: `Failed to rebase onto ${targetBranchToJjRevision(targetBranch)}. Aborting task.`,
+            message: `Failed to rebase onto ${targetBranchToJjBookmark(targetBranch)}. Aborting task.`,
           })
         }
-
-        yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote}`
         const setBookmarkResult =
           yield* worktree.exec`jj bookmark set ${parsed.branch} --revision ${"@"}`
         if (setBookmarkResult !== 0) {

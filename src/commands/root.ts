@@ -44,7 +44,7 @@ import {
 import { WorkerStatus } from "../domain/WorkerState.ts"
 import { GitFlow, GitFlowCommit, GitFlowError, GitFlowPR } from "../GitFlow.ts"
 import { getAllProjects, welcomeWizard } from "../Projects.ts"
-import type { Project } from "../domain/Project.ts"
+import type { Project, ProjectReviewCompletion } from "../domain/Project.ts"
 import { getDefaultCliAgentPreset } from "../Presets.ts"
 import type { QuitError } from "effect/Terminal"
 import type { TimeoutError } from "effect/Cause"
@@ -61,6 +61,13 @@ import { ClankaMuxerLayer } from "../Clanka.ts"
 const jjTaskMessage = (task: PrdIssue) =>
   task.id ? `${task.id} ${task.title}` : task.title
 
+export const shouldAutoSetIssueDone = (options: {
+  readonly reviewCompletion: ProjectReviewCompletion
+  readonly task: PrdIssue | null
+}) =>
+  options.reviewCompletion === "auto-done" &&
+  options.task?.state === "in-review"
+
 const run = Effect.fnUntraced(
   function* (options: {
     readonly startedDeferred: Deferred.Deferred<void>
@@ -69,6 +76,7 @@ const run = Effect.fnUntraced(
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
     readonly review: boolean
+    readonly reviewCompletion: ProjectReviewCompletion
   }): Effect.fn.Return<
     void,
     | PlatformError.PlatformError
@@ -319,6 +327,17 @@ const run = Effect.fnUntraced(
         issueId: taskId,
         worktree,
       })
+    } else if (
+      shouldAutoSetIssueDone({
+        reviewCompletion: options.reviewCompletion,
+        task,
+      })
+    ) {
+      yield* source.updateIssue({
+        projectId,
+        issueId: taskId,
+        state: "done",
+      })
     } else {
       yield* prd.maybeRevertIssue({ issueId: taskId })
     }
@@ -371,6 +390,7 @@ const runProject = Effect.fnUntraced(
             stallTimeout: options.stallTimeout,
             runTimeout: options.runTimeout,
             review: options.project.reviewAgent,
+            reviewCompletion: options.project.reviewCompletion,
           }).pipe(
             Effect.provide(
               options.project.gitFlow === "commit" ? GitFlowCommit : GitFlowPR,
