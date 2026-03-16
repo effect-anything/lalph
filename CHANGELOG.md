@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.63
+
+### Patch Changes
+
+- [`135e149`](https://github.com/effect-anything/lalph/commit/135e149301cb8051bbd3857ac8f2ffe7cb40f215) Thanks [@xesrevinu](https://github.com/xesrevinu)! - add project review-completion setting so successful loops can automatically move issues from review to done, and restore JJ commit-mode rebases to target the local tracked bookmark so sequential changes stay linear.
+
 ## 0.3.62
 
 ### Patch Changes
