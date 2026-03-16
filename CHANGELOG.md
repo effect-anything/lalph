@@ -5,12 +5,13 @@
 ### Patch Changes
 
 - [`1957bd2`](https://github.com/tim-smart/lalph/commit/1957bd26f96367915f911534220375b59145eb40) Thanks [@tim-smart](https://github.com/tim-smart)! - add support for websocket mode
+- [`6e3ddd0`](https://github.com/tim-smart/lalph/commit/6e3ddd0fcc21ef3489cbd303f04c48d6f7b51fd3) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
 
 ## 0.3.64
 
 ### Patch Changes
 
-- [`6e3ddd0`](https://github.com/tim-smart/lalph/commit/6e3ddd0fcc21ef3489cbd303f04c48d6f7b51fd3) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+- [`2759122`](https://github.com/effect-anything/lalph/commit/2759122014fe7bd700e9d6fb9bbc2d34e2dc3cd1) Thanks [@xesrevinu](https://github.com/xesrevinu)! - add project review-completion setting so successful loops can automatically move issues from review to done, support local JJ target branches such as `main` for local-only linear integration, and serialize project integration so concurrent JJ tasks merge back one at a time.
 
 ## 0.3.63
 
