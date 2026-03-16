@@ -55,6 +55,7 @@ import type { PrdIssue } from "../domain/PrdIssue.ts"
 import { CurrentTaskRef } from "../TaskTools.ts"
 import type { OutputFormatter } from "clanka"
 import { ClankaMuxerLayer } from "../Clanka.ts"
+import { agentResearcher } from "../Agents/researcher.ts"
 
 // Main iteration run logic
 
@@ -75,6 +76,7 @@ const run = Effect.fnUntraced(
     readonly specsDirectory: string
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
+    readonly research: boolean
     readonly review: boolean
     readonly reviewCompletion: ProjectReviewCompletion
     readonly integrate: <A, E, R>(
@@ -242,6 +244,16 @@ const run = Effect.fnUntraced(
         s.transitionTo(WorkerStatus.Working({ issueId: taskId })),
       )
 
+      let researchResult = Option.none<string>()
+      if (options.research) {
+        researchResult = yield* agentResearcher({
+          task: chosenTask.prd,
+          specsDirectory: options.specsDirectory,
+          stallTimeout: options.stallTimeout,
+          preset: taskPreset,
+        })
+      }
+
       const promptGen = yield* PromptGen
       const instructions = taskPreset.cliAgent.command
         ? promptGen.prompt({
@@ -273,6 +285,7 @@ const run = Effect.fnUntraced(
         stallTimeout: options.stallTimeout,
         preset: taskPreset,
         prompt: instructions,
+        research: researchResult,
         steer,
       }).pipe(
         Effect.provideService(CurrentTaskRef, issueRef),
@@ -397,6 +410,7 @@ const runProject = Effect.fnUntraced(
             specsDirectory: options.specsDirectory,
             stallTimeout: options.stallTimeout,
             runTimeout: options.runTimeout,
+            research: options.project.researchAgent,
             review: options.project.reviewAgent,
             reviewCompletion: options.project.reviewCompletion,
             integrate: integrationSemaphore.withPermit,
@@ -582,7 +596,7 @@ const watchTaskState = Effect.fnUntraced(function* (options: {
       return Effect.fail(
         new TaskStateChanged({
           issueId: options.issueId,
-          state: issue.state,
+          state: issue?.state ?? "missing",
         }),
       )
     }),

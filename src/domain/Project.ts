@@ -15,6 +15,7 @@ export class Project extends Schema.Class<Project>("lalph/Project")({
   concurrency: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   checkoutMode: ProjectCheckoutMode.pipe(withEncodeDefault(() => "worktree")),
   gitFlow: Schema.Literals(["pr", "commit"]),
+  researchAgent: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
   reviewAgent: Schema.Boolean,
   reviewCompletion: ProjectReviewCompletion.pipe(
     withEncodeDefault(() => "manual"),

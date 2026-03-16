@@ -153,6 +153,10 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
       readonly selected: boolean
     }>,
   })
+  const researchAgent = yield* Prompt.toggle({
+    message: "Enable research agent?",
+    initial: existing ? existing.researchAgent : true,
+  })
   const reviewAgent = yield* Prompt.toggle({
     message: "Enable review agent?",
     initial: existing ? existing.reviewAgent : true,
@@ -188,6 +192,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     targetBranch,
     checkoutMode,
     gitFlow,
+    researchAgent,
     reviewAgent,
     reviewCompletion,
   })

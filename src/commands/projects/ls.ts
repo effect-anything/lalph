@@ -7,7 +7,7 @@ import { Settings } from "../../Settings.ts"
 
 export const commandProjectsLs = Command.make("ls").pipe(
   Command.withDescription(
-    "List configured projects and how they run (enabled state, concurrency, execution mode, branch, git flow, review agent, review completion).",
+    "List configured projects and how they run (enabled state, concurrency, execution mode, branch, git flow, research agent, review agent, review completion).",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
@@ -37,6 +37,9 @@ export const commandProjectsLs = Command.make("ls").pipe(
         }
         console.log(
           `  Git flow: ${project.gitFlow === "pr" ? "Pull Request" : "Commit"}`,
+        )
+        console.log(
+          `  Research agent: ${project.researchAgent ? "Enabled" : "Disabled"}`,
         )
         console.log(
           `  Review agent: ${project.reviewAgent ? "Enabled" : "Disabled"}`,

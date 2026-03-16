@@ -10,17 +10,11 @@ type ProviderOptions = OpenAiLanguageModel.Config["Service"]
 type ModelOptions = ProviderOptions & AgentOptions
 
 const splitOptions = (options?: ModelOptions) => {
-  const {
-    supportsAssistantPrefill,
-    supportsNoTools,
-    systemPromptTransform: _systemPromptTransform,
-    ...providerConfig
-  } = options ?? {}
+  const { systemPromptTransform, ...providerConfig } = options ?? {}
 
   return {
     providerConfig,
-    supportsAssistantPrefill,
-    supportsNoTools,
+    systemPromptTransform,
   }
 }
 
@@ -44,8 +38,7 @@ export const model = (
   model: (string & {}) | OpenAiLanguageModel.Model,
   options?: ModelOptions | undefined,
 ): Model.Model<"openai", LanguageModel, HttpClient> => {
-  const { providerConfig, supportsAssistantPrefill, supportsNoTools } =
-    splitOptions(options)
+  const { providerConfig, systemPromptTransform } = splitOptions(options)
 
   return Model.make(
     "openai",
@@ -64,12 +57,12 @@ export const model = (
         },
       }),
       AgentModelConfig.layer({
-        systemPromptTransform: (system, effect) =>
-          OpenAiLanguageModel.withConfigOverride(effect, {
-            instructions: system,
-          }),
-        supportsAssistantPrefill: supportsAssistantPrefill ?? true,
-        supportsNoTools: supportsNoTools ?? true,
+        systemPromptTransform:
+          systemPromptTransform ??
+          ((system, effect) =>
+            OpenAiLanguageModel.withConfigOverride(effect, {
+              instructions: system,
+            })),
       }),
     ).pipe(Layer.provide(layerClient)),
   )

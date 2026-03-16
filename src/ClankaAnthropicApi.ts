@@ -10,17 +10,11 @@ type ProviderOptions = AnthropicLanguageModel.Config["Service"]
 type ModelOptions = ProviderOptions & AgentOptions
 
 const splitOptions = (options?: ModelOptions) => {
-  const {
-    supportsAssistantPrefill,
-    supportsNoTools,
-    systemPromptTransform: _systemPromptTransform,
-    ...providerConfig
-  } = options ?? {}
+  const { systemPromptTransform, ...providerConfig } = options ?? {}
 
   return {
     providerConfig,
-    supportsAssistantPrefill,
-    supportsNoTools,
+    systemPromptTransform,
   }
 }
 
@@ -45,8 +39,7 @@ export const model = (
   model: (string & {}) | AnthropicLanguageModel.Model,
   options?: ModelOptions | undefined,
 ): Model.Model<"anthropic", LanguageModel, HttpClient> => {
-  const { providerConfig, supportsAssistantPrefill, supportsNoTools } =
-    splitOptions(options)
+  const { providerConfig, systemPromptTransform } = splitOptions(options)
 
   return Model.make(
     "anthropic",
@@ -57,12 +50,12 @@ export const model = (
         config: providerConfig,
       }),
       AgentModelConfig.layer({
-        systemPromptTransform: (system, effect) =>
-          AnthropicLanguageModel.withConfigOverride(effect, {
-            system: [{ type: "text", text: system }],
-          }),
-        supportsAssistantPrefill: supportsAssistantPrefill ?? false,
-        supportsNoTools: supportsNoTools ?? false,
+        systemPromptTransform:
+          systemPromptTransform ??
+          ((system, effect) =>
+            AnthropicLanguageModel.withConfigOverride(effect, {
+              system: [{ type: "text", text: system }],
+            })),
       }),
     ).pipe(Layer.provide(layerClient)),
   )

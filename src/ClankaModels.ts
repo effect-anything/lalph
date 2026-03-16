@@ -1,6 +1,6 @@
 // oxlint-disable typescript/no-explicit-any
-import { NodeHttpClient } from "@effect/platform-node"
-import { Codex, Copilot } from "clanka"
+import { NodeHttpClient, NodeSocket } from "@effect/platform-node"
+import { Agent, Codex, Copilot } from "clanka"
 import { Effect, flow, Layer, LayerMap, Schema } from "effect"
 import * as AnthropicApi from "./ClankaAnthropicApi.ts"
 import * as OpenAiApi from "./ClankaOpenAiApi.ts"
@@ -38,41 +38,63 @@ export class ClankaModels extends LayerMap.Service<ClankaModels>()(
     dependencies: [ModelServices],
     lookup: Effect.fnUntraced(function* (input: string) {
       const [provider, model, reasoning] = yield* parseInput(input.split("/"))
-      switch (provider) {
-        case "openai": {
-          return Codex.model(model, {
-            reasoning: {
-              effort: reasoning,
-            },
-          })
-        }
-        case "copilot": {
-          return Copilot.model(model, {
-            ...reasoningToCopilotConfig(model, reasoning),
-          })
-        }
-        case "openai-api": {
-          return OpenAiApi.model(model, {
-            reasoning: {
-              effort: reasoning,
-            },
-          })
-        }
-        case "anthropic-api": {
-          return AnthropicApi.model(model, {
-            cache_control: {
-              type: "ephemeral",
-            },
-            output_config: {
-              effort: reasoningToAnthropicEffort(reasoning),
-            },
-          })
-        }
-      }
+      const layer = resolve(provider, model, reasoning)
+      return Layer.merge(
+        layer,
+        Agent.layerSubagentModel(
+          reasoning === "low"
+            ? layer
+            : resolve(
+                provider,
+                model,
+                reasoning === "medium" ? "low" : "medium",
+              ),
+        ),
+      )
     }, Layer.unwrap),
   },
 ) {}
 
+const resolve = (
+  provider: typeof Provider.Type,
+  model: string,
+  reasoning: typeof Reasoning.Type,
+) => {
+  switch (provider) {
+    case "openai": {
+      return Codex.modelWebSocket(model, {
+        reasoning: {
+          effort: reasoning,
+        },
+      }).pipe(
+        Layer.provide(NodeSocket.layerWebSocketConstructorWS),
+        Layer.provide(Codex.layerClient),
+      )
+    }
+    case "copilot": {
+      return Copilot.model(model, {
+        ...reasoningToCopilotConfig(model, reasoning),
+      }).pipe(Layer.provide(Copilot.layerClient))
+    }
+    case "openai-api": {
+      return OpenAiApi.model(model, {
+        reasoning: {
+          effort: reasoning,
+        },
+      })
+    }
+    case "anthropic-api": {
+      return AnthropicApi.model(model, {
+        cache_control: {
+          type: "ephemeral",
+        },
+        output_config: {
+          effort: reasoningToAnthropicEffort(reasoning),
+        },
+      })
+    }
+  }
+}
 const reasoningToCopilotConfig = (
   model: string,
   reasoning: typeof Reasoning.Type,

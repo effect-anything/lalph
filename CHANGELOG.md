@@ -1,6 +1,25 @@
 # lalph
 
+## 0.3.65
+
+### Patch Changes
+
+- [`1957bd2`](https://github.com/tim-smart/lalph/commit/1957bd26f96367915f911534220375b59145eb40) Thanks [@tim-smart](https://github.com/tim-smart)! - add support for websocket mode
+
+## 0.3.64
+
+### Patch Changes
+
+- [`6e3ddd0`](https://github.com/tim-smart/lalph/commit/6e3ddd0fcc21ef3489cbd303f04c48d6f7b51fd3) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
 ## 0.3.63
+
+### Patch Changes
+
+- [`33fcb72`](https://github.com/tim-smart/lalph/commit/33fcb72c17b7c2082afa923242c2417bba54f9a6) Thanks [@tim-smart](https://github.com/tim-smart)! - tweak research prompt
+- [`08e090e`](https://github.com/tim-smart/lalph/commit/08e090e2081d7f39df55a6e089e999086d0b740f) Thanks [@tim-smart](https://github.com/tim-smart)! - add optional research agent
+
+- [`4e4b99f`](https://github.com/tim-smart/lalph/commit/4e4b99ff7d1541fa5bcecfb5a17b6d9c867dd49d) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
 
 ### Patch Changes
 

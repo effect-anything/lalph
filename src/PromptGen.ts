@@ -263,6 +263,24 @@ All steps must be done before the task can be considered complete.
    - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks. Make sure to preserve important information such as specification file references.
    - If you believe the task is complete, update the \`state\` to "in-review".`
 
+      const promptResearch = (options: {
+        readonly task: PrdIssue
+      }) => `Your job is to gather all the necessary information and details to complete the task described below. Do not make any code changes yet, your job is just to research and gather information.
+
+In the final report:
+
+- Include key file names, line numbers, and code snippets that are relevant to the task.
+- Any key discoveries that will help with implementing the task.
+- Any other information that will help speed up the implementation of the task.
+- You DO NOT need to add your report to the task description, just include it in your final output.
+
+# Task details
+
+ID: ${options.task.id}
+Title: ${options.task.title}
+
+${options.task.description}`
+
       const promptReview = (options: {
         readonly prompt: string
         readonly gitFlow: GitFlow["Service"]
@@ -440,6 +458,7 @@ Make sure to setup dependencies between the tasks using the \`blockedBy\` field.
         promptChooseClanka,
         prompt,
         promptClanka,
+        promptResearch,
         promptReview,
         promptReviewCustom,
         promptTimeout,
