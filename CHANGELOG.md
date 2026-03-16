@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.64
+
+### Patch Changes
+
+- [`2759122`](https://github.com/effect-anything/lalph/commit/2759122014fe7bd700e9d6fb9bbc2d34e2dc3cd1) Thanks [@xesrevinu](https://github.com/xesrevinu)! - add project review-completion setting so successful loops can automatically move issues from review to done, support local JJ target branches such as `main` for local-only linear integration, and serialize project integration so concurrent JJ tasks merge back one at a time.
+
 ## 0.3.63
 
 ### Patch Changes
