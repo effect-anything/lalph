@@ -77,6 +77,9 @@ const run = Effect.fnUntraced(
     readonly runTimeout: Duration.Duration
     readonly review: boolean
     readonly reviewCompletion: ProjectReviewCompletion
+    readonly integrate: <A, E, R>(
+      effect: Effect.Effect<A, E, R>,
+    ) => Effect.Effect<A, E, R>
   }): Effect.fn.Return<
     void,
     | PlatformError.PlatformError
@@ -314,33 +317,37 @@ const run = Effect.fnUntraced(
 
     if (cancelled) return
 
-    yield* gitFlow.postWork({
-      worktree,
-      targetBranch: Option.getOrUndefined(options.targetBranch),
-      issueId: taskId,
-    })
+    yield* options.integrate(
+      Effect.gen(function* () {
+        yield* gitFlow.postWork({
+          worktree,
+          targetBranch: Option.getOrUndefined(options.targetBranch),
+          issueId: taskId,
+        })
 
-    const task = yield* prd.findById(taskId)
-    if (task?.autoMerge) {
-      yield* gitFlow.autoMerge({
-        targetBranch: Option.getOrUndefined(options.targetBranch),
-        issueId: taskId,
-        worktree,
-      })
-    } else if (
-      shouldAutoSetIssueDone({
-        reviewCompletion: options.reviewCompletion,
-        task,
-      })
-    ) {
-      yield* source.updateIssue({
-        projectId,
-        issueId: taskId,
-        state: "done",
-      })
-    } else {
-      yield* prd.maybeRevertIssue({ issueId: taskId })
-    }
+        const task = yield* prd.findById(taskId)
+        if (task?.autoMerge) {
+          yield* gitFlow.autoMerge({
+            targetBranch: Option.getOrUndefined(options.targetBranch),
+            issueId: taskId,
+            worktree,
+          })
+        } else if (
+          shouldAutoSetIssueDone({
+            reviewCompletion: options.reviewCompletion,
+            task,
+          })
+        ) {
+          yield* source.updateIssue({
+            projectId,
+            issueId: taskId,
+            state: "done",
+          })
+        } else {
+          yield* prd.maybeRevertIssue({ issueId: taskId })
+        }
+      }),
+    )
   },
   Effect.scoped,
   Effect.provide(Prd.layer, { local: true }),
@@ -357,6 +364,7 @@ const runProject = Effect.fnUntraced(
     const isFinite = Number.isFinite(options.iterations)
     const iterationsDisplay = isFinite ? options.iterations : "unlimited"
     const semaphore = Semaphore.makeUnsafe(options.project.concurrency)
+    const integrationSemaphore = Semaphore.makeUnsafe(1)
     const fibers = yield* FiberSet.make()
 
     yield* resetInProgress.pipe(Effect.withSpan("Main.resetInProgress"))
@@ -391,6 +399,7 @@ const runProject = Effect.fnUntraced(
             runTimeout: options.runTimeout,
             review: options.project.reviewAgent,
             reviewCompletion: options.project.reviewCompletion,
+            integrate: integrationSemaphore.withPermit,
           }).pipe(
             Effect.provide(
               options.project.gitFlow === "commit" ? GitFlowCommit : GitFlowPR,

@@ -22,8 +22,11 @@ import { commandPlanTasks } from "./plan/tasks.ts"
 import { Editor } from "../Editor.ts"
 import { selectCliAgentPreset } from "../Presets.ts"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { parseBranch } from "../shared/git.ts"
-import { targetBranchToJjBookmark } from "../shared/vcs.ts"
+import {
+  resolveTargetBranch,
+  targetBranchToJjBookmark,
+  targetBranchToJjRevision,
+} from "../shared/vcs.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import { ClankaMuxerLayer } from "../Clanka.ts"
 
@@ -202,7 +205,10 @@ const commitAndPushSpecification = Effect.fnUntraced(
         stderr: "inherit",
       }).pipe(spawner.exitCode)
 
-    const parsed = parseBranch(options.targetBranch)
+    const parsed = yield* resolveTargetBranch({
+      repository: worktree.repository,
+      targetBranch: options.targetBranch,
+    })
 
     if (worktree.repository.kind === "git") {
       const addCode = yield* git(["add", absSpecsDirectory])
@@ -223,7 +229,9 @@ const commitAndPushSpecification = Effect.fnUntraced(
         })
       }
 
-      yield* git(["push", parsed.remote, `HEAD:${parsed.branch}`])
+      if (Option.isSome(parsed.remote)) {
+        yield* git(["push", parsed.remote.value, `HEAD:${parsed.branch}`])
+      }
       return
     }
 
@@ -235,10 +243,12 @@ const commitAndPushSpecification = Effect.fnUntraced(
       })
     }
 
-    yield* worktree.exec`jj git fetch --remote ${parsed.remote} --branch ${parsed.branch}`
-    yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote}`
+    if (Option.isSome(parsed.remote)) {
+      yield* worktree.exec`jj git fetch --remote ${parsed.remote.value} --branch ${parsed.branch}`
+      yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote.value}`
+    }
     const rebaseCode =
-      yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjBookmark(options.targetBranch)}`
+      yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjBookmark(parsed)}`
     if (rebaseCode !== 0) {
       return yield* new SpecGitError({
         message: "Failed to rebase the generated specification change.",
@@ -253,12 +263,14 @@ const commitAndPushSpecification = Effect.fnUntraced(
       })
     }
 
-    const pushCode =
-      yield* worktree.exec`jj git push --remote ${parsed.remote} --bookmark ${parsed.branch}`
-    if (pushCode !== 0) {
-      return yield* new SpecGitError({
-        message: "Failed to push the generated specification change.",
-      })
+    if (Option.isSome(parsed.remote)) {
+      const pushCode =
+        yield* worktree.exec`jj git push --remote ${parsed.remote.value} --bookmark ${parsed.branch}`
+      if (pushCode !== 0) {
+        return yield* new SpecGitError({
+          message: `Failed to push the generated specification change to ${targetBranchToJjRevision(parsed)}.`,
+        })
+      }
     }
   },
   Effect.ignore({ log: "Warn" }),

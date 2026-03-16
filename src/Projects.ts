@@ -103,7 +103,8 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
   })
   const targetBranch = pipe(
     yield* Prompt.text({
-      message: "Target branch (leave empty to use HEAD)",
+      message:
+        "Target branch (e.g. main or origin/main; leave empty to use HEAD)",
       default: existing
         ? Option.getOrElse(existing.targetBranch, () => "")
         : "",

@@ -83,6 +83,10 @@ for runs, how many tasks can run concurrently, which branch to target, what git
 flow to use, whether review is enabled, and whether successful loops should
 leave issues in review or automatically move them to done.
 
+For Jujutsu commit mode, the target branch can be a local bookmark such as
+`main` for local-only linear integration, or a remote-tracking branch such as
+`origin/main` when you also want lalph to fetch and push automatically.
+
 `lalph` runs across all enabled projects in parallel; for single-project
 commands, you'll be prompted to choose an active project when needed.
 

@@ -26,7 +26,6 @@ import {
 import { projectById } from "./Projects.ts"
 import { CurrentProjectId } from "./Settings.ts"
 import { constWorkerMaxOutputChunks, CurrentWorkerState } from "./Workers.ts"
-import { parseBranch } from "./shared/git.ts"
 import {
   resolveLalphDirectory,
   syncLalphDirectory,
@@ -37,6 +36,7 @@ import {
   getCurrentRepository,
   getGithubRepository,
   makeJjWorkspaceName,
+  resolveTargetBranch,
   targetBranchToJjRevision,
 } from "./shared/vcs.ts"
 
@@ -237,18 +237,25 @@ export const setupWorktree = Effect.fnUntraced(function* (options: {
   const targetBranch = yield* getTargetBranch
 
   if (Option.isSome(targetBranch)) {
-    const parsed = parseBranch(targetBranch.value)
+    const parsed = yield* resolveTargetBranch({
+      repository: options.repository,
+      targetBranch: targetBranch.value,
+    })
 
     if (options.repository.kind === "git") {
-      yield* options.exec`git fetch ${parsed.remote}`
+      if (Option.isSome(parsed.remote)) {
+        yield* options.exec`git fetch ${parsed.remote.value}`
+      }
       const code = yield* options.exec`git checkout ${parsed.branchWithRemote}`
-      if (code !== 0) {
+      if (code !== 0 && Option.isSome(parsed.remote)) {
         yield* options.exec`git checkout -b ${parsed.branch}`
-        yield* options.exec`git push -u ${parsed.remote} ${parsed.branch}`
+        yield* options.exec`git push -u ${parsed.remote.value} ${parsed.branch}`
       }
     } else {
-      yield* options.exec`jj git fetch --remote ${parsed.remote} --branch ${parsed.branch}`
-      yield* options.exec`jj new ${targetBranchToJjRevision(targetBranch.value)}`
+      if (Option.isSome(parsed.remote)) {
+        yield* options.exec`jj git fetch --remote ${parsed.remote.value} --branch ${parsed.branch}`
+      }
+      yield* options.exec`jj new ${targetBranchToJjRevision(parsed)}`
     }
   }
 

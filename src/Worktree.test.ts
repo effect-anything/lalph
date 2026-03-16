@@ -45,6 +45,10 @@ const seedGitCommit = (directory: string) => {
     cwd: directory,
     stdio: "pipe",
   })
+  execFileSync("git", ["config", "commit.gpgsign", "false"], {
+    cwd: directory,
+    stdio: "pipe",
+  })
   execFileSync("git", ["commit", "--allow-empty", "-m", "init"], {
     cwd: directory,
     stdio: "pipe",
@@ -70,6 +74,10 @@ const makeJjDirectory = (branches: ReadonlyArray<string> = []) => {
     stdio: "pipe",
   })
   execFileSync("git", ["config", "user.name", "Test User"], {
+    cwd: seedDirectory,
+    stdio: "pipe",
+  })
+  execFileSync("git", ["config", "commit.gpgsign", "false"], {
     cwd: seedDirectory,
     stdio: "pipe",
   })
@@ -552,6 +560,85 @@ test(
     )
 
     assert.equal(workspaceListAfter.includes(`${result.workspaceName}:`), false)
+  },
+)
+
+test(
+  "Worktree.layer creates jj workspaces from a local target bookmark without fetching a remote",
+  { concurrency: false },
+  async (t) => {
+    const { directory, repositoryDirectory } = makeJjDirectory(["release"])
+    t.after(() => {
+      rmSync(directory, { force: true, recursive: true })
+    })
+
+    execFileSync(
+      "jj",
+      ["bookmark", "set", "release", "--revision", "release@origin"],
+      {
+        cwd: repositoryDirectory,
+        stdio: "pipe",
+      },
+    )
+
+    mkdirSync(join(repositoryDirectory, ".lalph"), { recursive: true })
+    writeFileSync(
+      join(repositoryDirectory, ".lalph", "hooks.yml"),
+      `hooks:
+  post-create:
+    capture: >-
+      printf '%s:%s\\n' '{{ workspace }}' "$LALPH_TARGET_BRANCH" >> .hook-log
+`,
+    )
+
+    const jjProjectId = Schema.decodeUnknownSync(ProjectId)("AUT-79")
+    const project = new Project({
+      checkoutMode: "worktree",
+      concurrency: 1,
+      enabled: true,
+      gitFlow: "commit",
+      id: jjProjectId,
+      reviewAgent: false,
+      reviewCompletion: "manual",
+      targetBranch: Option.some("release"),
+    })
+
+    const result = await withCurrentDirectory(repositoryDirectory, () =>
+      Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const worktree = yield* Worktree
+            const parentDescription = execFileSync(
+              "jj",
+              ["log", "-r", "@-", "--no-graph", "-T", 'description ++ "\\n"'],
+              {
+                cwd: worktree.directory,
+                encoding: "utf8",
+                stdio: "pipe",
+              },
+            )
+            return {
+              hookLog: readFileSync(
+                join(worktree.directory, ".hook-log"),
+                "utf8",
+              ),
+              parentDescription,
+            } as const
+          }).pipe(
+            Effect.provide(Worktree.layer),
+            Effect.provideService(
+              CurrentProjectId,
+              CurrentProjectId.of(jjProjectId),
+            ),
+            Effect.provideService(Settings, settingsWithProjects(project)),
+            Effect.provide(PlatformServices),
+          ),
+        ),
+      ),
+    )
+
+    assert.equal(result.hookLog.endsWith(":release\n"), true)
+    assert.equal(result.parentDescription.trimEnd(), "release")
   },
 )
 

@@ -9,6 +9,12 @@ export type RepositoryInfo = {
   readonly root: string
 }
 
+export type ResolvedTargetBranch = {
+  readonly branch: string
+  readonly branchWithRemote: string
+  readonly remote: Option.Option<string>
+}
+
 export type RemoteUrl = {
   readonly name: string
   readonly url: string
@@ -122,15 +128,39 @@ export const getCurrentRepository = Effect.gen(function* () {
 export const makeJjWorkspaceName = (directory: string) =>
   `lalph-${directory.replaceAll(/[^a-zA-Z0-9-]/g, "-")}`
 
-export const targetBranchToJjRevision = (targetBranch: string) => {
-  const parsed = parseBranch(targetBranch)
-  return `${parsed.branch}@${parsed.remote}`
-}
+export const resolveTargetBranch = Effect.fnUntraced(function* (options: {
+  readonly repository: RepositoryInfo
+  readonly targetBranch: string
+}) {
+  const remotes = yield* listGitRemotes(options.repository)
+  const remoteNames = new Set(remotes.map((remote) => remote.name))
+  const parts = options.targetBranch.split("/")
+  const maybeRemote = parts[0]
 
-export const targetBranchToJjBookmark = (targetBranch: string) => {
-  const parsed = parseBranch(targetBranch)
-  return parsed.branch
-}
+  if (maybeRemote && parts.length > 1 && remoteNames.has(maybeRemote)) {
+    const parsed = parseBranch(options.targetBranch)
+    return {
+      branch: parsed.branch,
+      branchWithRemote: parsed.branchWithRemote,
+      remote: Option.some(parsed.remote),
+    } satisfies ResolvedTargetBranch
+  }
+
+  return {
+    branch: options.targetBranch,
+    branchWithRemote: options.targetBranch,
+    remote: Option.none(),
+  } satisfies ResolvedTargetBranch
+})
+
+export const targetBranchToJjRevision = (targetBranch: ResolvedTargetBranch) =>
+  Option.match(targetBranch.remote, {
+    onNone: () => targetBranch.branch,
+    onSome: (remote) => `${targetBranch.branch}@${remote}`,
+  })
+
+export const targetBranchToJjBookmark = (targetBranch: ResolvedTargetBranch) =>
+  targetBranch.branch
 
 const parseGitRemoteConfig = (output: string): ReadonlyArray<RemoteUrl> =>
   output
@@ -144,6 +174,23 @@ const parseGitRemoteConfig = (output: string): ReadonlyArray<RemoteUrl> =>
       if (!match) {
         return []
       }
+      return [{ name: match[1]!, url: match[2]! }] as const
+    })
+
+const parseJjRemoteList = (output: string): ReadonlyArray<RemoteUrl> =>
+  output
+    .split("\n")
+    .map((line) => line.trim())
+    .flatMap((line) => {
+      if (line.length === 0) {
+        return []
+      }
+
+      const match = /^(\S+)\s+(.+)$/.exec(line)
+      if (!match) {
+        return []
+      }
+
       return [{ name: match[1]!, url: match[2]! }] as const
     })
 
@@ -205,7 +252,6 @@ const parseJjWorkspaceList = (output: string) =>
 export const listGitRemotes = Effect.fnUntraced(function* (
   repository: RepositoryInfo,
 ) {
-  const pathService = yield* Path.Path
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
 
   const command =
@@ -223,23 +269,16 @@ export const listGitRemotes = Effect.fnUntraced(function* (
             stderr: "pipe",
           },
         )
-      : ChildProcess.make(
-          "git",
-          [
-            "--git-dir",
-            pathService.join(repository.root, ".jj", "repo", "store", "git"),
-            "config",
-            "--get-regexp",
-            "^remote\\..*\\.url$",
-          ],
-          {
-            stderr: "pipe",
-          },
-        )
+      : ChildProcess.make("jj", ["git", "remote", "list"], {
+          cwd: repository.root,
+          stderr: "pipe",
+        })
 
   return yield* command.pipe(
     spawner.string,
-    Effect.map(parseGitRemoteConfig),
+    Effect.map(
+      repository.kind === "git" ? parseGitRemoteConfig : parseJjRemoteList,
+    ),
     Effect.catchCause(() => Effect.succeed([])),
   )
 })

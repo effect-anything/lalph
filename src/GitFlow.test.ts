@@ -558,3 +558,101 @@ test("GitFlowCommit.postWork rebases jj changes onto the local bookmark for line
     "jj git push --remote origin --bookmark master",
   ])
 })
+
+test("GitFlowCommit.postWork supports local-only jj target branches without remote sync", async (t) => {
+  const { directory, repositoryDirectory } = makeJjDirectory()
+  t.after(() => {
+    rmSync(directory, { force: true, recursive: true })
+  })
+
+  const project = new Project({
+    checkoutMode: "in-place",
+    concurrency: 1,
+    enabled: true,
+    gitFlow: "commit",
+    id: projectId,
+    reviewAgent: false,
+    reviewCompletion: "manual",
+    targetBranch: Option.some("master"),
+  })
+
+  const commands: Array<string> = []
+  const worktree = {
+    directory: repositoryDirectory,
+    exec: (
+      template: TemplateStringsArray,
+      ...args: Array<string | number | boolean>
+    ) =>
+      Effect.sync(() => {
+        commands.push(String.raw({ raw: template }, ...args))
+        return 0
+      }),
+    repository: {
+      kind: "jj" as const,
+      root: repositoryDirectory,
+    },
+  } as unknown as Worktree["Service"]
+
+  await withCurrentDirectory(repositoryDirectory, () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const gitFlow = yield* GitFlow
+        yield* gitFlow.postWork({
+          issueId: "AUT-71",
+          targetBranch: "master",
+          worktree,
+        })
+      }).pipe(
+        Effect.provide(GitFlowCommit),
+        Effect.provideService(CurrentProjectId, CurrentProjectId.of(projectId)),
+        Effect.provideService(
+          CurrentWorkerState,
+          CurrentWorkerState.of({
+            output: Atom.make(Chunk.empty<string>()),
+            state: Atom.make(
+              WorkerState.initial({
+                id: 1,
+                projectId,
+              }),
+            ),
+          }),
+        ),
+        Effect.provideService(Settings, settingsWithProjects(project)),
+        Effect.provideService(
+          Prd,
+          Prd.of({
+            findById: () => Effect.succeed(null),
+            flagUnmergable: () => Effect.void,
+            maybeRevertIssue: () => Effect.void,
+            path: join(repositoryDirectory, ".lalph", "prd.yml"),
+            revertUpdatedIssues: Effect.void,
+            setAutoMerge: () => Effect.void,
+            setChosenIssueId: () => Effect.void,
+          }),
+        ),
+        Effect.provideService(
+          IssueSource,
+          IssueSource.of({
+            cancelIssue: () => Effect.void,
+            cliAgentPresetInfo: () => Effect.void,
+            createIssue: () => Effect.die("unused"),
+            ensureInProgress: () => Effect.void,
+            info: () => Effect.void,
+            issueCliAgentPreset: () => Effect.succeed(Option.none()),
+            issues: () => Effect.succeed([]),
+            reset: Effect.void,
+            settings: () => Effect.void,
+            updateCliAgentPreset: () => Effect.die("unused"),
+            updateIssue: () => Effect.void,
+          }),
+        ),
+        Effect.provide(PlatformServices),
+      ),
+    ),
+  )
+
+  assert.deepEqual(commands, [
+    "jj rebase --branch @ --onto master",
+    "jj bookmark set master --revision @",
+  ])
+})

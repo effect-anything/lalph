@@ -10,6 +10,7 @@ import {
 } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { Atom, AtomRegistry } from "effect/unstable/reactivity"
+import type { ChildProcessSpawner } from "effect/unstable/process"
 import {
   HookCommandFailedError,
   Hooks,
@@ -21,10 +22,11 @@ import { CurrentProjectId } from "./Settings.ts"
 import { projectById } from "./Projects.ts"
 import type { Worktree } from "./Worktree.ts"
 import { CurrentWorkerState } from "./Workers.ts"
-import { parseBranch } from "./shared/git.ts"
 import {
   getCurrentRepository,
+  resolveTargetBranch,
   targetBranchToJjBookmark,
+  targetBranchToJjRevision,
   type VcsKind,
 } from "./shared/vcs.ts"
 
@@ -52,7 +54,10 @@ export class GitFlow extends ServiceMap.Service<
     }) => Effect.Effect<
       void,
       IssueSourceError | PlatformError | GitFlowError,
-      Prd | IssueSource | CurrentProjectId
+      | Prd
+      | IssueSource
+      | CurrentProjectId
+      | ChildProcessSpawner.ChildProcessSpawner
     >
     readonly autoMerge: (options: {
       readonly targetBranch: string | undefined
@@ -320,10 +325,15 @@ But you **do not** need to push your changes or switch workspaces, and you shoul
         }
         const prd = yield* Prd
 
-        const parsed = parseBranch(targetBranch)
+        const parsed = yield* resolveTargetBranch({
+          repository: worktree.repository,
+          targetBranch,
+        })
 
         if (worktree.repository.kind === "git") {
-          yield* worktree.exec`git fetch ${parsed.remote}`
+          if (Option.isSome(parsed.remote)) {
+            yield* worktree.exec`git fetch ${parsed.remote.value}`
+          }
           yield* worktree.exec`git restore --worktree .`
 
           const rebaseResult =
@@ -335,25 +345,29 @@ But you **do not** need to push your changes or switch workspaces, and you shoul
             })
           }
 
-          const pushResult =
-            yield* worktree.exec`git push ${parsed.remote} ${`HEAD:${parsed.branch}`}`
-          if (pushResult !== 0) {
-            yield* prd.flagUnmergable({ issueId })
-            return yield* new GitFlowError({
-              message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
-            })
+          if (Option.isSome(parsed.remote)) {
+            const pushResult =
+              yield* worktree.exec`git push ${parsed.remote.value} ${`HEAD:${parsed.branch}`}`
+            if (pushResult !== 0) {
+              yield* prd.flagUnmergable({ issueId })
+              return yield* new GitFlowError({
+                message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
+              })
+            }
           }
           return
         }
 
-        yield* worktree.exec`jj git fetch --remote ${parsed.remote} --branch ${parsed.branch}`
-        yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote}`
+        if (Option.isSome(parsed.remote)) {
+          yield* worktree.exec`jj git fetch --remote ${parsed.remote.value} --branch ${parsed.branch}`
+          yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote.value}`
+        }
         const rebaseResult =
-          yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjBookmark(targetBranch)}`
+          yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjBookmark(parsed)}`
         if (rebaseResult !== 0) {
           yield* prd.flagUnmergable({ issueId })
           return yield* new GitFlowError({
-            message: `Failed to rebase onto ${targetBranchToJjBookmark(targetBranch)}. Aborting task.`,
+            message: `Failed to rebase onto ${targetBranchToJjBookmark(parsed)}. Aborting task.`,
           })
         }
         const setBookmarkResult =
@@ -365,13 +379,15 @@ But you **do not** need to push your changes or switch workspaces, and you shoul
           })
         }
 
-        const pushResult =
-          yield* worktree.exec`jj git push --remote ${parsed.remote} --bookmark ${parsed.branch}`
-        if (pushResult !== 0) {
-          yield* prd.flagUnmergable({ issueId })
-          return yield* new GitFlowError({
-            message: `Failed to push jj bookmark ${parsed.branch}@${parsed.remote}. Aborting task.`,
-          })
+        if (Option.isSome(parsed.remote)) {
+          const pushResult =
+            yield* worktree.exec`jj git push --remote ${parsed.remote.value} --bookmark ${parsed.branch}`
+          if (pushResult !== 0) {
+            yield* prd.flagUnmergable({ issueId })
+            return yield* new GitFlowError({
+              message: `Failed to push jj bookmark ${targetBranchToJjRevision(parsed)}. Aborting task.`,
+            })
+          }
         }
       }),
       autoMerge: Effect.fnUntraced(function* (options) {
