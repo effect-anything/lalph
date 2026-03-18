@@ -6,5 +6,6 @@ export default defineConfig({
   treeshake: true,
   deps: {
     onlyBundle: false,
+    neverBundle: /tree-sitter/,
   },
 })

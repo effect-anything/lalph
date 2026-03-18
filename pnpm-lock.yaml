@@ -12,14 +12,14 @@ importers:
         specifier: ^12.8.0
         version: 12.8.0
       tree-sitter:
-        specifier: ^0.25.0
-        version: 0.25.0
+        specifier: ^0.22.4
+        version: 0.22.4
       tree-sitter-javascript:
         specifier: ^0.25.0
-        version: 0.25.0(tree-sitter@0.25.0)
+        version: 0.25.0(tree-sitter@0.22.4)
       tree-sitter-typescript:
         specifier: ^0.23.2
-        version: 0.23.2(tree-sitter@0.25.0)
+        version: 0.23.2(tree-sitter@0.22.4)
     devDependencies:
       '@changesets/changelog-github':
         specifier: ^0.6.0
@@ -52,8 +52,8 @@ importers:
         specifier: 7.0.0-dev.20260318.1
         version: 7.0.0-dev.20260318.1
       clanka:
-        specifier: ^0.2.8
-        version: 0.2.8(@effect/ai-openai-compat@4.0.0-beta.35(effect@4.0.0-beta.35))(@effect/ai-openai@4.0.0-beta.35(effect@4.0.0-beta.35))(effect@4.0.0-beta.35)(zod@4.3.6)
+        specifier: ^0.2.9
+        version: 0.2.9(@effect/ai-openai-compat@4.0.0-beta.35(effect@4.0.0-beta.35))(@effect/ai-openai@4.0.0-beta.35(effect@4.0.0-beta.35))(effect@4.0.0-beta.35)(zod@4.3.6)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -906,8 +906,8 @@ packages:
   chownr@1.1.4:
     resolution: {integrity: sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==}
 
-  clanka@0.2.8:
-    resolution: {integrity: sha512-g0b2DGeQgxi5TqhPyfxCEonVhNRlGedc0KaN7t8YKoSxeL7Jf3DTftW6udsghpTlnEDdooNhvKgi/ytVlLhlLw==}
+  clanka@0.2.9:
+    resolution: {integrity: sha512-qQQHQjKKwm352Tu5hv3BD6oSFVSTaZKDR5krLdkkB+SmLvvvOy4ml9EHbAhVoI8Q1974aabzS4Zpf06TizACdA==}
     peerDependencies:
       '@effect/ai-openai': 4.0.0-beta.35
       '@effect/ai-openai-compat': 4.0.0-beta.35
@@ -1944,8 +1944,8 @@ packages:
       tree-sitter:
         optional: true
 
-  tree-sitter@0.25.0:
-    resolution: {integrity: sha512-PGZZzFW63eElZJDe/b/R/LbsjDDYJa5UEjLZJB59RQsMX+fo0j54fqBPn1MGKav/QNa0JR0zBiVaikYDWCj5KQ==}
+  tree-sitter@0.22.4:
+    resolution: {integrity: sha512-usbHZP9/oxNsUY65MQUsduGRqDHQOou1cagUSwjhoSYAmSahjQDAVsh9s+SlZkn8X8+O1FULRGwHu7AFP3kjzg==}
 
   tsdown@0.21.4:
     resolution: {integrity: sha512-Q/kBi8SXkr4X6JI/NAZKZY1UuiEcbuXtIskL4tZCsgpDiEPM/2W6lC+OonNA31S+V3KsWedFvbFDBs23hvt+Aw==}
@@ -2925,7 +2925,7 @@ snapshots:
 
   chownr@1.1.4: {}
 
-  clanka@0.2.8(@effect/ai-openai-compat@4.0.0-beta.35(effect@4.0.0-beta.35))(@effect/ai-openai@4.0.0-beta.35(effect@4.0.0-beta.35))(effect@4.0.0-beta.35)(zod@4.3.6):
+  clanka@0.2.9(@effect/ai-openai-compat@4.0.0-beta.35(effect@4.0.0-beta.35))(@effect/ai-openai@4.0.0-beta.35(effect@4.0.0-beta.35))(effect@4.0.0-beta.35)(zod@4.3.6):
     dependencies:
       '@effect/ai-openai': 4.0.0-beta.35(effect@4.0.0-beta.35)
       '@effect/ai-openai-compat': 4.0.0-beta.35(effect@4.0.0-beta.35)
@@ -2935,9 +2935,9 @@ snapshots:
       chalk: 5.6.2
       effect: 4.0.0-beta.35
       glob: 13.0.6
-      tree-sitter: 0.25.0
-      tree-sitter-javascript: 0.25.0(tree-sitter@0.25.0)
-      tree-sitter-typescript: 0.23.2(tree-sitter@0.25.0)
+      tree-sitter: 0.22.4
+      tree-sitter-javascript: 0.25.0(tree-sitter@0.22.4)
+      tree-sitter-typescript: 0.23.2(tree-sitter@0.22.4)
       turndown: 7.2.2
     optionalDependencies:
       '@sqliteai/sqlite-vector-darwin-arm64': 0.9.93
@@ -3944,29 +3944,29 @@ snapshots:
 
   tree-kill@1.2.2: {}
 
-  tree-sitter-javascript@0.23.1(tree-sitter@0.25.0):
+  tree-sitter-javascript@0.23.1(tree-sitter@0.22.4):
     dependencies:
       node-addon-api: 8.6.0
       node-gyp-build: 4.8.4
     optionalDependencies:
-      tree-sitter: 0.25.0
+      tree-sitter: 0.22.4
 
-  tree-sitter-javascript@0.25.0(tree-sitter@0.25.0):
+  tree-sitter-javascript@0.25.0(tree-sitter@0.22.4):
     dependencies:
       node-addon-api: 8.6.0
       node-gyp-build: 4.8.4
     optionalDependencies:
-      tree-sitter: 0.25.0
+      tree-sitter: 0.22.4
 
-  tree-sitter-typescript@0.23.2(tree-sitter@0.25.0):
+  tree-sitter-typescript@0.23.2(tree-sitter@0.22.4):
     dependencies:
       node-addon-api: 8.6.0
       node-gyp-build: 4.8.4
-      tree-sitter-javascript: 0.23.1(tree-sitter@0.25.0)
+      tree-sitter-javascript: 0.23.1(tree-sitter@0.22.4)
     optionalDependencies:
-      tree-sitter: 0.25.0
+      tree-sitter: 0.22.4
 
-  tree-sitter@0.25.0:
+  tree-sitter@0.22.4:
     dependencies:
       node-addon-api: 8.6.0
       node-gyp-build: 4.8.4
