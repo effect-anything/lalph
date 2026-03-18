@@ -6,6 +6,7 @@ import {
   FiberSet,
   FileSystem,
   Iterable,
+  Layer,
   MutableRef,
   Option,
   Path,
@@ -54,7 +55,7 @@ import type { AiError } from "effect/unstable/ai/AiError"
 import type { PrdIssue } from "../domain/PrdIssue.ts"
 import { CurrentTaskRef } from "../TaskTools.ts"
 import type { OutputFormatter } from "clanka"
-import { ClankaMuxerLayer } from "../Clanka.ts"
+import { ClankaMuxerLayer, SemanticSearchLayer } from "../Clanka.ts"
 import { agentResearcher } from "../Agents/researcher.ts"
 
 // Main iteration run logic
@@ -330,7 +331,9 @@ const run = Effect.fnUntraced(
     }
   },
   Effect.scoped,
-  Effect.provide(Prd.layer, { local: true }),
+  Effect.provide(SemanticSearchLayer.pipe(Layer.provideMerge(Prd.layer)), {
+    local: true,
+  }),
 )
 
 const runProject = Effect.fnUntraced(
