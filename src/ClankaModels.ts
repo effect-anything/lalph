@@ -32,7 +32,7 @@ export class ClankaModels extends LayerMap.Service<ClankaModels>()(
         Agent.layerSubagentModel(
           reasoning === "low"
             ? layer
-            : resolve(
+            : resolveSubagent(
                 provider,
                 model,
                 reasoning === "medium" ? "low" : "medium",
@@ -62,6 +62,31 @@ const resolve = (
     case "copilot": {
       return Copilot.model(model, {
         ...reasoningToCopilotConfig(model, reasoning),
+      }).pipe(Layer.provide(Copilot.layerClient))
+    }
+  }
+}
+
+const resolveSubagent = (
+  provider: "openai" | "copilot",
+  model: string,
+  reasoning: typeof Reasoning.Type,
+) => {
+  const flooredReasoning = reasoning === "medium" ? "low" : "medium"
+  switch (provider) {
+    case "openai": {
+      return Codex.modelWebSocket("gpt-5.4-mini", {
+        reasoning: {
+          effort: "high",
+        },
+      }).pipe(
+        Layer.provide(NodeSocket.layerWebSocketConstructorWS),
+        Layer.provide(Codex.layerClient),
+      )
+    }
+    case "copilot": {
+      return Copilot.model(model, {
+        ...reasoningToCopilotConfig(model, flooredReasoning),
       }).pipe(Layer.provide(Copilot.layerClient))
     }
   }
