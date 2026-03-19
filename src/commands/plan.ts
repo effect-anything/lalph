@@ -129,6 +129,7 @@ const plan = Effect.fnUntraced(
       specsDirectory: options.specsDirectory,
       dangerous: options.dangerous,
       preset: options.preset,
+      ralph: options.ralph,
     })
 
     const planDetails = yield* pipe(
@@ -145,7 +146,7 @@ const plan = Effect.fnUntraced(
         Option.map((projects) =>
           projects.map((p) =>
             p.id === projectId
-              ? { ...p, ralphSpec: planDetails.specification }
+              ? p.update({ ralphSpec: planDetails.specification })
               : p,
           ),
         ),
@@ -181,13 +182,14 @@ const plan = Effect.fnUntraced(
     }
   },
   Effect.scoped,
-  Effect.provide([
-    PromptGen.layer,
-    Prd.layerProvided,
-    Worktree.layer,
-    Settings.layer,
-    CurrentIssueSource.layer,
-  ]),
+  (effect, options) =>
+    Effect.provide(effect, [
+      PromptGen.layer,
+      options.ralph ? Prd.layerNoop : Prd.layerProvided,
+      Worktree.layer,
+      Settings.layer,
+      CurrentIssueSource.layer,
+    ]),
 )
 
 export class SpecNotFound extends Data.TaggedError("SpecNotFound") {

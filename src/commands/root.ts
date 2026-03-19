@@ -426,7 +426,7 @@ const runRalph = Effect.fnUntraced(
             allProjects,
             Option.map((projects) =>
               projects.map((p) =>
-                p.id === projectId ? { ...p, enabled: false } : p,
+                p.id === projectId ? p.update({ enabled: false }) : p,
               ),
             ),
           )

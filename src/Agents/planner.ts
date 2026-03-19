@@ -9,6 +9,7 @@ export const agentPlanner = Effect.fnUntraced(function* (options: {
   readonly specsDirectory: string
   readonly dangerous: boolean
   readonly preset: CliAgentPreset
+  readonly ralph: boolean
 }) {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
@@ -18,7 +19,9 @@ export const agentPlanner = Effect.fnUntraced(function* (options: {
   yield* pipe(
     options.preset.cliAgent.commandPlan({
       prompt: promptGen.planPrompt(options),
-      prdFilePath: pathService.join(".lalph", "prd.yml"),
+      prdFilePath: options.ralph
+        ? undefined
+        : pathService.join(".lalph", "prd.yml"),
       dangerous: options.dangerous,
     }),
     ChildProcess.setCwd(worktree.directory),

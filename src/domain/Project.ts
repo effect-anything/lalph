@@ -12,4 +12,11 @@ export class Project extends Schema.Class<Project>("lalph/Project")({
   ralphSpec: Schema.optional(Schema.String),
   researchAgent: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
   reviewAgent: Schema.Boolean,
-}) {}
+}) {
+  update(updates: Partial<Project>): Project {
+    return new Project({
+      ...this,
+      ...updates,
+    })
+  }
+}
