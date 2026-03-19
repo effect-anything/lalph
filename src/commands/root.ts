@@ -356,6 +356,7 @@ const runRalph = Effect.fnUntraced(
     readonly research: boolean
     readonly review: boolean
     readonly specFile: string
+    readonly maxContext: number | undefined
   }): Effect.fn.Return<
     void,
     | PlatformError.PlatformError
@@ -468,6 +469,7 @@ const runRalph = Effect.fnUntraced(
         preset,
         prompt: instructions,
         research: researchResult,
+        maxContext: options.maxContext,
         ralph: true,
       }).pipe(Effect.withSpan("Main.worker"))
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
@@ -522,6 +524,7 @@ const runProject = Effect.fnUntraced(
     readonly specsDirectory: string
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
+    readonly maxContext: number | undefined
   }) {
     const isFinite = Number.isFinite(options.iterations)
     const iterationsDisplay = isFinite ? options.iterations : "unlimited"
@@ -567,6 +570,7 @@ const runProject = Effect.fnUntraced(
                   targetBranch: options.project.targetBranch,
                   stallTimeout: options.stallTimeout,
                   runTimeout: options.runTimeout,
+                  maxContext: options.maxContext,
                   review: options.project.reviewAgent,
                   research: options.project.researchAgent,
                   specFile: options.project.ralphSpec!,
@@ -659,6 +663,14 @@ const maxIterationMinutes = Flag.integer("max-minutes").pipe(
   Flag.withDefault(90),
 )
 
+const maxContext = Flag.integer("max-context").pipe(
+  Flag.withDescription(
+    "If the context window reaches this number of tokens, try again (default: LALPH_MAX_CONTEXT or 250,000).",
+  ),
+  Flag.withFallbackConfig(Config.int("LALPH_MAX_TOKENS")),
+  Flag.withDefault(250000),
+)
+
 const stallMinutes = Flag.integer("stall-minutes").pipe(
   Flag.withDescription(
     "Fail an iteration if the agent stops responding for this many minutes (default: LALPH_STALL_MINUTES or 5).",
@@ -686,6 +698,7 @@ const verbose = Flag.boolean("verbose").pipe(
 export const commandRoot = Command.make("lalph", {
   iterations,
   maxIterationMinutes,
+  maxContext,
   stallMinutes,
 }).pipe(
   Command.withSharedFlags({
@@ -700,6 +713,7 @@ export const commandRoot = Command.make("lalph", {
       function* ({
         iterations,
         maxIterationMinutes,
+        maxContext,
         stallMinutes,
         specsDirectory,
       }) {
@@ -726,6 +740,7 @@ export const commandRoot = Command.make("lalph", {
               specsDirectory,
               stallTimeout: Duration.minutes(stallMinutes),
               runTimeout: Duration.minutes(maxIterationMinutes),
+              maxContext,
             }).pipe(Effect.provideService(CurrentProjectId, project.id)),
           { concurrency: "unbounded", discard: true },
         )

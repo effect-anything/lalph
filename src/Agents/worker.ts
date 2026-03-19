@@ -13,6 +13,7 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
   readonly prompt: string
   readonly research: Option.Option<string>
   readonly steer?: Stream.Stream<string>
+  readonly maxContext?: number | undefined
   readonly ralph: boolean
 }) {
   const pathService = yield* Path.Path
@@ -42,6 +43,7 @@ ${research}`,
           ]),
       }),
       stallTimeout: options.stallTimeout,
+      maxContext: options.maxContext,
       steer: options.steer,
       mode: options.ralph ? "ralph" : "default",
     })

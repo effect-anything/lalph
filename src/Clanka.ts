@@ -1,8 +1,10 @@
 import { Agent, OutputFormatter, SemanticSearch } from "clanka"
 import {
+  Cause,
   Config,
   Duration,
   Effect,
+  identity,
   Layer,
   Option,
   Path,
@@ -70,6 +72,7 @@ export const runClanka = Effect.fnUntraced(
     readonly prompt: Prompt.RawInput
     readonly system?: string | undefined
     readonly stallTimeout?: Duration.Input | undefined
+    readonly maxContext?: number | undefined
     readonly steer?: Stream.Stream<string> | undefined
     readonly mode?: "ralph" | "choose" | "default" | undefined
   }) {
@@ -101,6 +104,14 @@ export const runClanka = Effect.fnUntraced(
     }
 
     return yield* stream.pipe(
+      options.maxContext
+        ? Stream.tap((part) => {
+            if (part._tag !== "Usage") return Effect.void
+            const contextTokens = part.contextTokens
+            if (contextTokens <= options.maxContext!) return Effect.void
+            return Effect.fail(new Cause.TimeoutError("Max context reached"))
+          })
+        : identity,
       Stream.runDrain,
       Effect.as(""),
       Effect.catchTag("AgentFinished", (e) => Effect.succeed(e.summary)),
