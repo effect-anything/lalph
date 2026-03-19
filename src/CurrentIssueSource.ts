@@ -20,7 +20,6 @@ import { Atom, Reactivity } from "effect/unstable/reactivity"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
 import type { Project, ProjectId } from "./domain/Project.ts"
 import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
-import { projectById } from "./Projects.ts"
 
 const issueSources: ReadonlyArray<typeof CurrentIssueSource.Service> = [
   {
