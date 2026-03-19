@@ -129,11 +129,11 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
 
   const researchAgent = yield* Prompt.toggle({
     message: "Enable research agent?",
-    initial: existing ? existing.researchAgent : true,
+    initial: existing ? existing.researchAgent : false,
   })
   const reviewAgent = yield* Prompt.toggle({
     message: "Enable review agent?",
-    initial: existing ? existing.reviewAgent : true,
+    initial: existing ? existing.reviewAgent : false,
   })
 
   const project = new Project({
