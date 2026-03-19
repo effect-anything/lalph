@@ -93,6 +93,7 @@ export const commandPlan = Command.make("plan", {
             targetBranch: project.targetBranch,
             dangerous,
             preset,
+            createTasks: project.gitFlow !== "ralph",
           }).pipe(Effect.provideService(CurrentProjectId, project.id))
         }).pipe(
           Effect.provide([
@@ -116,6 +117,7 @@ const plan = Effect.fnUntraced(
     readonly targetBranch: Option.Option<string>
     readonly dangerous: boolean
     readonly preset: CliAgentPreset
+    readonly createTasks: boolean
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
@@ -143,13 +145,15 @@ const plan = Effect.fnUntraced(
       })
     }
 
-    yield* Effect.log("Converting specification into tasks")
+    if (options.createTasks) {
+      yield* Effect.log("Converting specification into tasks")
 
-    yield* agentTasker({
-      specificationPath: planDetails.specification,
-      specsDirectory: options.specsDirectory,
-      preset: options.preset,
-    })
+      yield* agentTasker({
+        specificationPath: planDetails.specification,
+        specsDirectory: options.specsDirectory,
+        preset: options.preset,
+      })
+    }
 
     if (!worktree.inExisting) {
       yield* pipe(
