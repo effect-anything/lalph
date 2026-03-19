@@ -125,6 +125,17 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
   ) {
     return Settings.use((_) => _.set(setting, value))
   }
+  static update<Name extends string, S extends Schema.Codec<any, any>>(
+    setting: Setting<Name, S>,
+    f: (current: Option.Option<S["Type"]>) => Option.Option<S["Type"]>,
+  ) {
+    return Settings.use((_) =>
+      _.get(setting).pipe(
+        Effect.map(f),
+        Effect.flatMap((v) => _.set(setting, v)),
+      ),
+    )
+  }
 
   static getProject<Name extends string, S extends Schema.Codec<any, any>>(
     setting: ProjectSetting<Name, S>,

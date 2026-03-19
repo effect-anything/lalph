@@ -113,6 +113,14 @@ ${
     : "\n  Leave `githubPrNumber` as null."
 }
 `
+      const promptChooseRalph = (options: {
+        readonly specFile: string
+      }) => `- Read the spec file at \`${options.specFile}\` to understand the current project.
+- Choose the next most important task to work on from the specification.
+- If all of the tasks are complete then do nothing more. Otherwise, write the chosen task in a ".lalph/task.md" file.
+
+Note: The task should be a specific, actionable item that can be completed in a reasonable amount of time.
+`
 
       const keyInformation = (options: {
         readonly specsDirectory: string
@@ -254,6 +262,32 @@ All steps must be done before the task can be considered complete.${
    - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks. Make sure to preserve important information such as specification file references.
    - If you believe the task is complete, update the \`state\` to "in-review".`
 
+      const promptRalph = (options: {
+        readonly task: string
+        readonly targetBranch: string | undefined
+        readonly specFile: string
+        readonly gitFlow: GitFlow["Service"]
+      }) => `# The task
+
+${options.task}
+
+### Instructions
+
+All steps must be done before the task can be considered complete.
+
+1. ${options.gitFlow.setupInstructions({ githubPrNumber: undefined })}
+2. Implement the task.
+  - Along the way, update the specification file with any important discoveries or issues found.
+3. Run any checks / feedback loops, such as type checks, unit tests, or linting.
+4. Update the specification implementation plan at \`${options.specFile}\` to reflect changes to task states.
+4. ${options.gitFlow.commitInstructions({
+        githubPrInstructions: sourceMeta.githubPrInstructions,
+        githubPrNumber: undefined,
+        taskId: "unknown",
+        targetBranch: options.targetBranch,
+      })}
+`
+
       const promptResearch = (options: {
         readonly task: PrdIssue
       }) => `Your job is to gather all the necessary information and details to complete the task described below. Do not make any code changes yet, your job is just to research and gather information.
@@ -325,6 +359,22 @@ permission.
 5. If any specifications need updating based on your new understanding, update them.
 
 ${prdNotes(options)}`
+
+      const promptTimeoutRalph = (options: {
+        readonly task: string
+        readonly specFile: string
+      }) => `Your earlier attempt to complete the following task took too
+long and has timed out.
+
+The following instructions should be done without interaction or asking for
+permission.
+
+1. Investigate why you think the task took too long. Research the codebase
+   further to understand what is needed to complete the task.
+2. Update the specification file at \`${options.specFile}\` to break the task
+   down into smaller tasks, and include any important discoveries from your research.
+3. Commit the changes to the specification file without pushing.
+`
 
       const promptTimeoutClanka = (options: {
         readonly taskId: string
@@ -447,13 +497,16 @@ Make sure to setup dependencies between the tasks using the \`blockedBy\` field.
       return {
         promptChoose,
         promptChooseClanka,
+        promptChooseRalph,
         prompt,
+        promptRalph,
         promptClanka,
         promptResearch,
         promptReview,
         promptReviewCustom,
         promptTimeout,
         promptTimeoutClanka,
+        promptTimeoutRalph,
         planPrompt,
         promptPlanTasks,
         promptPlanTasksClanka,

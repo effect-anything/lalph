@@ -199,6 +199,69 @@ But you **do not** need to git push your changes or switch branches.
   }),
 ).pipe(Layer.provide(AtomRegistry.layer))
 
+export const GitFlowRalph = Layer.effect(
+  GitFlow,
+  Effect.gen(function* () {
+    const currentWorker = yield* CurrentWorkerState
+    const workerState = yield* Atom.get(currentWorker.state)
+
+    return GitFlow.of({
+      requiresGithubPr: false,
+      branch: `lalph/worker-${workerState.id}`,
+
+      setupInstructions: () =>
+        `You are already on a new branch for this task. You do not need to checkout any other branches.`,
+
+      commitInstructions:
+        () => `When you have completed your changes, **you must** commit them to the current local branch. Do not git push your changes or switch branches.
+   - **DO NOT** commit any of the files in the \`.lalph\` directory.`,
+
+      reviewInstructions: `You are already on the branch with their changes.
+After making any changes, **you must** commit them to the same branch.
+But you **do not** need to git push your changes or switch branches.
+
+ - **DO NOT** commit any of the files in the \`.lalph\` directory.
+ - You have full permission to create git commits.`,
+
+      postWork: Effect.fnUntraced(function* ({
+        worktree,
+        targetBranch,
+        issueId,
+      }) {
+        if (!targetBranch) {
+          return yield* Effect.logWarning(
+            "GitFlowRalph: No target branch specified, skipping postWork.",
+          )
+        }
+        const prd = yield* Prd
+
+        const parsed = parseBranch(targetBranch)
+        yield* worktree.exec`git fetch ${parsed.remote}`
+
+        yield* worktree.exec`git restore --worktree .`
+        const rebaseResult =
+          yield* worktree.exec`git rebase ${parsed.branchWithRemote}`
+        if (rebaseResult !== 0) {
+          yield* prd.flagUnmergable({ issueId })
+          return yield* new GitFlowError({
+            message: `Failed to rebase onto ${parsed.branchWithRemote}. Aborting task.`,
+          })
+        }
+
+        const pushResult =
+          yield* worktree.exec`git push ${parsed.remote} ${`HEAD:${parsed.branch}`}`
+        if (pushResult !== 0) {
+          yield* prd.flagUnmergable({ issueId })
+          return yield* new GitFlowError({
+            message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
+          })
+        }
+      }),
+      autoMerge: () => Effect.void,
+    })
+  }),
+).pipe(Layer.provide(AtomRegistry.layer))
+
 // Errors
 
 export class GitFlowError extends Data.TaggedError("GitFlowError")<{

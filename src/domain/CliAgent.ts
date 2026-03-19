@@ -14,12 +14,12 @@ export class CliAgent<const Id extends string> extends Data.Class<{
   outputTransformer?: OutputTransformer | undefined
   command?: (options: {
     readonly prompt: string
-    readonly prdFilePath: string
+    readonly prdFilePath: string | undefined
     readonly extraArgs: ReadonlyArray<string>
   }) => ChildProcess.Command
   commandPlan: (options: {
     readonly prompt: string
-    readonly prdFilePath: string
+    readonly prdFilePath: string | undefined
     readonly dangerous: boolean
   }) => ChildProcess.Command
 }> {}
@@ -62,7 +62,13 @@ const opencode = new CliAgent({
   command: ({ prompt, prdFilePath, extraArgs }) =>
     ChildProcess.make(
       "opencode",
-      ["run", prompt, "--thinking", ...extraArgs, "-f", prdFilePath],
+      [
+        "run",
+        prompt,
+        "--thinking",
+        ...extraArgs,
+        ...(prdFilePath ? ["-f", prdFilePath] : []),
+      ],
       {
         extendEnv: true,
         env: {
@@ -78,9 +84,11 @@ const opencode = new CliAgent({
       "opencode",
       [
         "--prompt",
-        `@${prdFilePath}
+        prdFilePath
+          ? `@${prdFilePath}
 
-${prompt}`,
+${prompt}`
+          : prompt,
       ],
       {
         extendEnv: true,
@@ -113,9 +121,11 @@ const claude = new CliAgent({
         "AskUserQuestion",
         ...extraArgs,
         "--",
-        `@${prdFilePath}
+        prdFilePath
+          ? `@${prdFilePath}
 
-${prompt}`,
+${prompt}`
+          : prompt,
       ],
       {
         stdout: "pipe",
@@ -151,9 +161,11 @@ const codex = new CliAgent({
         "exec",
         "--dangerously-bypass-approvals-and-sandbox",
         ...extraArgs,
-        `@${prdFilePath}
+        prdFilePath
+          ? `@${prdFilePath}
 
-${prompt}`,
+${prompt}`
+          : prompt,
       ],
       {
         stdout: "pipe",
@@ -166,9 +178,11 @@ ${prompt}`,
       "codex",
       [
         ...(dangerous ? ["--dangerously-bypass-approvals-and-sandbox"] : []),
-        `@${prdFilePath}
+        prdFilePath
+          ? `@${prdFilePath}
 
-${prompt}`,
+${prompt}`
+          : prompt,
       ],
       {
         stdout: "inherit",
@@ -188,9 +202,11 @@ const amp = new CliAgent({
         "--dangerously-allow-all",
         "--stream-json-thinking",
         ...extraArgs,
-        `@${prdFilePath}
+        prdFilePath
+          ? `@${prdFilePath}
 
-${prompt}`,
+${prompt}`
+          : prompt,
       ],
       {
         stdout: "pipe",

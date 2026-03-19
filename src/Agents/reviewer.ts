@@ -12,6 +12,7 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
   readonly preset: CliAgentPreset
   readonly instructions: string
+  readonly ralph: boolean
 }) {
   const fs = yield* FileSystem.FileSystem
   const pathService = yield* Path.Path
@@ -29,7 +30,7 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
     yield* runClanka({
       directory: worktree.directory,
       model: options.preset.extraArgs.join(" "),
-      system: promptGen.systemClanka(options),
+      system: options.ralph ? undefined : promptGen.systemClanka(options),
       prompt: Option.match(customInstructions, {
         onNone: () =>
           promptGen.promptReview({

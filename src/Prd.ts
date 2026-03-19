@@ -294,4 +294,13 @@ export class Prd extends ServiceMap.Service<
       CurrentIssueSource.layer,
     ]),
   )
+  static layerNoop = Layer.succeed(this, {
+    path: "",
+    maybeRevertIssue: () => Effect.void,
+    revertUpdatedIssues: Effect.void,
+    flagUnmergable: () => Effect.void,
+    findById: () => Effect.succeed(null),
+    setChosenIssueId: () => Effect.void,
+    setAutoMerge: () => Effect.void,
+  })
 }

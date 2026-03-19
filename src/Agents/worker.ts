@@ -13,6 +13,7 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
   readonly prompt: string
   readonly research: Option.Option<string>
   readonly steer?: Stream.Stream<string>
+  readonly ralph: boolean
 }) {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
@@ -49,7 +50,9 @@ ${research}`,
   const cliCommand = pipe(
     options.preset.cliAgent.command({
       prompt: options.prompt,
-      prdFilePath: pathService.join(".lalph", "prd.yml"),
+      prdFilePath: options.ralph
+        ? undefined
+        : pathService.join(".lalph", "prd.yml"),
       extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),

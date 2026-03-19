@@ -18,8 +18,9 @@ import { PlatformServices } from "./shared/platform.ts"
 import { atomRuntime } from "./shared/runtime.ts"
 import { Atom, Reactivity } from "effect/unstable/reactivity"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
-import type { ProjectId } from "./domain/Project.ts"
+import type { Project, ProjectId } from "./domain/Project.ts"
 import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import { projectById } from "./Projects.ts"
 
 const issueSources: ReadonlyArray<typeof CurrentIssueSource.Service> = [
   {
@@ -181,9 +182,9 @@ const getCurrentIssues = (projectId: ProjectId) =>
     suspendOnWaiting: true,
   })
 
-export const checkForWork = Effect.gen(function* () {
-  const projectId = yield* CurrentProjectId
-  const issues = yield* getCurrentIssues(projectId)
+export const checkForWork = Effect.fnUntraced(function* (project: Project) {
+  if (project.gitFlow === "ralph") return
+  const issues = yield* getCurrentIssues(project.id)
   const hasIncomplete = issues.some(
     (issue) => issue.state === "todo" && issue.blockedBy.length === 0,
   )

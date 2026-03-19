@@ -3,6 +3,7 @@ import {
   Deferred,
   Duration,
   Effect,
+  Fiber,
   FiberSet,
   FileSystem,
   Iterable,
@@ -17,6 +18,7 @@ import {
   Scope,
   Semaphore,
   Stream,
+  Unify,
 } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
@@ -43,8 +45,14 @@ import {
   withWorkerState,
 } from "../Workers.ts"
 import { WorkerStatus } from "../domain/WorkerState.ts"
-import { GitFlow, GitFlowCommit, GitFlowError, GitFlowPR } from "../GitFlow.ts"
-import { getAllProjects, welcomeWizard } from "../Projects.ts"
+import {
+  GitFlow,
+  GitFlowCommit,
+  GitFlowError,
+  GitFlowPR,
+  GitFlowRalph,
+} from "../GitFlow.ts"
+import { allProjects, getAllProjects, welcomeWizard } from "../Projects.ts"
 import type { Project } from "../domain/Project.ts"
 import { getDefaultCliAgentPreset } from "../Presets.ts"
 import type { QuitError } from "effect/Terminal"
@@ -57,6 +65,7 @@ import { CurrentTaskRef } from "../TaskTools.ts"
 import type { OutputFormatter } from "clanka"
 import { ClankaMuxerLayer, SemanticSearchLayer } from "../Clanka.ts"
 import { agentResearcher } from "../Agents/researcher.ts"
+import { agentChooserRalph } from "../Agents/chooserRalph.ts"
 
 // Main iteration run logic
 
@@ -258,6 +267,7 @@ const run = Effect.fnUntraced(
         prompt: instructions,
         research: researchResult,
         steer,
+        ralph: false,
       }).pipe(
         Effect.provideService(CurrentTaskRef, issueRef),
         catchStallInReview,
@@ -284,6 +294,7 @@ const run = Effect.fnUntraced(
           stallTimeout: options.stallTimeout,
           preset: taskPreset,
           instructions,
+          ralph: false,
         }).pipe(catchStallInReview, Effect.withSpan("Main.agentReviewer"))
 
         yield* source.updateIssue({
@@ -299,7 +310,7 @@ const run = Effect.fnUntraced(
           specsDirectory: options.specsDirectory,
           stallTimeout: options.stallTimeout,
           preset: taskPreset,
-          task: chosenTask.prd,
+          task: { _tag: "task", task: chosenTask.prd },
         }),
       ),
       Effect.raceFirst(watchTaskState({ issueId: taskId })),
@@ -336,6 +347,173 @@ const run = Effect.fnUntraced(
   }),
 )
 
+const runRalph = Effect.fnUntraced(
+  function* (options: {
+    readonly targetBranch: Option.Option<string>
+    readonly stallTimeout: Duration.Duration
+    readonly runTimeout: Duration.Duration
+    readonly research: boolean
+    readonly review: boolean
+    readonly specFile: string
+  }): Effect.fn.Return<
+    void,
+    | PlatformError.PlatformError
+    | Schema.SchemaError
+    | IssueSourceError
+    | QuitError
+    | GitFlowError
+    | ChosenTaskNotFound
+    | RunnerStalled
+    | TimeoutError
+    | AiError,
+    | CurrentProjectId
+    | ChildProcessSpawner.ChildProcessSpawner
+    | Settings
+    | Reactivity.Reactivity
+    | GithubCli
+    | IssueSource
+    | Prompt.Environment
+    | AtomRegistry.AtomRegistry
+    | GitFlow
+    | CurrentWorkerState
+    | PromptGen
+    | Prd
+    | Worktree
+    | ClankaModels
+    | OutputFormatter.Muxer
+    | Scope.Scope
+  > {
+    const worktree = yield* Worktree
+    const gitFlow = yield* GitFlow
+    const currentWorker = yield* CurrentWorkerState
+    const registry = yield* AtomRegistry.AtomRegistry
+    const projectId = yield* CurrentProjectId
+
+    const preset = yield* getDefaultCliAgentPreset
+
+    // ensure cleanup of branch after run
+    yield* Effect.addFinalizer(
+      Effect.fnUntraced(function* () {
+        const currentBranchName = yield* worktree
+          .currentBranch(worktree.directory)
+          .pipe(Effect.option, Effect.map(Option.getOrUndefined))
+        if (!currentBranchName) return
+
+        // enter detached state
+        yield* worktree.exec`git checkout --detach ${currentBranchName}`
+        // delete the branch
+        yield* worktree.exec`git branch -D ${currentBranchName}`
+      }, Effect.ignore()),
+    )
+
+    // 1. Choose task
+    // --------------
+
+    registry.update(currentWorker.state, (s) =>
+      s.transitionTo(WorkerStatus.ChoosingTask()),
+    )
+
+    const chosenTask = yield* agentChooserRalph({
+      stallTimeout: options.stallTimeout,
+      preset,
+      specFile: options.specFile,
+    }).pipe(
+      Effect.tapErrorTag(
+        "ChosenTaskNotFound",
+        Effect.fnUntraced(function* () {
+          // Disable project when all tasks are done
+          yield* Settings.update(
+            allProjects,
+            Option.map((projects) =>
+              projects.map((p) =>
+                p.id === projectId ? { ...p, enabled: false } : p,
+              ),
+            ),
+          )
+        }),
+      ),
+      Effect.withSpan("Main.chooser"),
+    )
+
+    yield* Effect.gen(function* () {
+      //
+      // 2. Work on task
+      // -----------------------
+
+      registry.update(currentWorker.state, (s) =>
+        s.transitionTo(WorkerStatus.Working({ issueId: "ralph" })),
+      )
+
+      let researchResult = Option.none<string>()
+      // if (options.research) {
+      //   researchResult = yield* agentResearcher({
+      //     task: chosenTask.prd,
+      //     specsDirectory: options.specsDirectory,
+      //     stallTimeout: options.stallTimeout,
+      //     preset: taskPreset,
+      //   })
+      // }
+
+      const promptGen = yield* PromptGen
+      const instructions = promptGen.promptRalph({
+        task: chosenTask,
+        specFile: options.specFile,
+        targetBranch: Option.getOrUndefined(options.targetBranch),
+        gitFlow,
+      })
+
+      const exitCode = yield* agentWorker({
+        stallTimeout: options.stallTimeout,
+        preset,
+        prompt: instructions,
+        research: researchResult,
+        ralph: true,
+      }).pipe(Effect.withSpan("Main.worker"))
+      yield* Effect.log(`Agent exited with code: ${exitCode}`)
+
+      // 3. Review task
+      // -----------------------
+
+      if (options.review) {
+        registry.update(currentWorker.state, (s) =>
+          s.transitionTo(WorkerStatus.Reviewing({ issueId: "ralph" })),
+        )
+
+        yield* agentReviewer({
+          specsDirectory: "",
+          stallTimeout: options.stallTimeout,
+          preset,
+          instructions,
+          ralph: true,
+        }).pipe(Effect.withSpan("Main.review"))
+      }
+    }).pipe(
+      Effect.timeout(options.runTimeout),
+      Effect.tapErrorTag("TimeoutError", () =>
+        agentTimeout({
+          specsDirectory: "",
+          stallTimeout: options.stallTimeout,
+          preset,
+          task: { _tag: "ralph", task: chosenTask, specFile: options.specFile },
+        }),
+      ),
+    )
+
+    yield* gitFlow.postWork({
+      worktree,
+      targetBranch: Option.getOrUndefined(options.targetBranch),
+      issueId: "",
+    })
+  },
+  Effect.scoped,
+  Effect.provide(
+    SemanticSearchLayer.pipe(
+      Layer.provideMerge([Prd.layerNoop, Worktree.layer]),
+    ),
+    { local: true },
+  ),
+)
+
 const runProject = Effect.fnUntraced(
   function* (options: {
     readonly iterations: number
@@ -370,26 +548,52 @@ const runProject = Effect.fnUntraced(
       const currentIteration = iteration
 
       const startedDeferred = yield* Deferred.make<void>()
+      let ralphDone = false
 
-      yield* checkForWork.pipe(
+      const gitFlow = options.project.gitFlow
+      const isRalph = gitFlow === "ralph"
+      const gitFlowLayer =
+        gitFlow === "commit"
+          ? GitFlowCommit
+          : gitFlow === "ralph"
+            ? GitFlowRalph
+            : GitFlowPR
+      const fiber = yield* checkForWork(options.project).pipe(
         Effect.andThen(
-          run({
-            startedDeferred,
-            targetBranch: options.project.targetBranch,
-            specsDirectory: options.specsDirectory,
-            stallTimeout: options.stallTimeout,
-            runTimeout: options.runTimeout,
-            review: options.project.reviewAgent,
-            research: options.project.researchAgent,
-          }).pipe(
-            Effect.provide(
-              options.project.gitFlow === "commit" ? GitFlowCommit : GitFlowPR,
-              { local: true },
-            ),
+          Unify.unify(
+            isRalph
+              ? runRalph({
+                  targetBranch: options.project.targetBranch,
+                  stallTimeout: options.stallTimeout,
+                  runTimeout: options.runTimeout,
+                  review: options.project.reviewAgent,
+                  research: options.project.researchAgent,
+                  specFile: options.project.ralphSpec!,
+                })
+              : run({
+                  startedDeferred,
+                  targetBranch: options.project.targetBranch,
+                  specsDirectory: options.specsDirectory,
+                  stallTimeout: options.stallTimeout,
+                  runTimeout: options.runTimeout,
+                  review: options.project.reviewAgent,
+                  research: options.project.researchAgent,
+                }),
+          ).pipe(
+            Effect.provide(gitFlowLayer, { local: true }),
             withWorkerState(options.project.id),
           ),
         ),
         Effect.catchTags({
+          ChosenTaskNotFound(_error) {
+            if (isRalph) {
+              ralphDone = true
+              return Effect.log(
+                `No more work to process for Ralph, ending after ${currentIteration + 1} iteration(s).`,
+              )
+            }
+            return Effect.void
+          },
           NoMoreWork(_error) {
             if (isFinite) {
               // If we have a finite number of iterations, we exit when no more
@@ -419,9 +623,12 @@ const runProject = Effect.fnUntraced(
         Effect.ensuring(Deferred.completeWith(startedDeferred, Effect.void)),
         FiberSet.run(fibers),
       )
-
-      yield* Deferred.await(startedDeferred)
-
+      if (isRalph) {
+        yield* Fiber.await(fiber)
+        if (ralphDone) break
+      } else {
+        yield* Deferred.await(startedDeferred)
+      }
       iteration++
     }
 

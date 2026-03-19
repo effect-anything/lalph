@@ -8,7 +8,8 @@ export class Project extends Schema.Class<Project>("lalph/Project")({
   enabled: Schema.Boolean,
   targetBranch: Schema.Option(Schema.String),
   concurrency: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
-  gitFlow: Schema.Literals(["pr", "commit"]),
+  gitFlow: Schema.Literals(["pr", "commit", "ralph"]),
+  ralphSpec: Schema.optional(Schema.String),
   researchAgent: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
   reviewAgent: Schema.Boolean,
 }) {}

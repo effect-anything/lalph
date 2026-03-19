@@ -121,8 +121,21 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
         value: "commit",
         selected: existing ? existing.gitFlow === "commit" : false,
       },
+      {
+        title: "Ralph",
+        description: "Tasks are determined from a spec file",
+        value: "ralph",
+        selected: existing ? existing.gitFlow === "ralph" : false,
+      },
     ] as const,
   })
+
+  let ralphSpec = Option.none<string>()
+  if (gitFlow === "ralph") {
+    ralphSpec = yield* Prompt.file({
+      message: "Path to Ralph spec file",
+    }).pipe(Effect.fromYieldable, Effect.map(Option.some))
+  }
 
   const researchAgent = yield* Prompt.toggle({
     message: "Enable research agent?",
@@ -139,6 +152,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     concurrency,
     targetBranch,
     gitFlow,
+    ralphSpec: Option.getOrUndefined(ralphSpec),
     researchAgent,
     reviewAgent,
   })
@@ -153,7 +167,9 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
 
   const source = yield* IssueSource
   yield* source.reset.pipe(Effect.provideService(CurrentProjectId, project.id))
-  yield* source.settings(project.id)
+  if (gitFlow !== "ralph") {
+    yield* source.settings(project.id)
+  }
 
   return project
 })
