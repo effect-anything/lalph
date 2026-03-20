@@ -1,4 +1,5 @@
-import { Agent, OutputFormatter, SemanticSearch } from "clanka"
+import * as Agent from "clanka/Agent"
+import * as OutputFormatter from "clanka/OutputFormatter"
 import {
   Cause,
   Config,
@@ -37,6 +38,9 @@ export const SemanticSearchLayer = Layer.unwrap(
     if (Option.isNone(apiKey)) {
       return Layer.empty
     }
+    const SemanticSearch = yield* Effect.promise(
+      () => import("clanka/SemanticSearch"),
+    )
     return SemanticSearch.layer({
       directory: worktree.directory,
       database: pathService.join(
