@@ -5,7 +5,7 @@ import { Prompt } from "effect/unstable/cli"
 import { allCliAgents, type AnyCliAgent } from "./domain/CliAgent.ts"
 import { parseCommand } from "./shared/child-process.ts"
 import { IssueSource } from "./IssueSource.ts"
-import { ClankaModels } from "./ClankaModels.ts"
+import { layerClankaModel, ModelServices } from "./ClankaModels.ts"
 import { LanguageModel } from "effect/unstable/ai"
 
 export const allCliAgentPresets = new Setting(
@@ -131,9 +131,13 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
 
   if (cliAgent.id === "clanka") {
     yield* Effect.log("Verifying Clanka model configuration...")
+    // @effect-diagnostics-next-line multipleEffectProvide:off
     yield* LanguageModel.generateText({ prompt: "say hello" }).pipe(
       Effect.ignore,
-      Effect.provide(ClankaModels.get(preset.extraArgs.join(" "))),
+      Effect.provide(layerClankaModel(preset.extraArgs.join(" ")), {
+        local: true,
+      }),
+      Effect.provide(ModelServices),
     )
   }
 

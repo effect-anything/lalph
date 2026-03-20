@@ -17,7 +17,6 @@ import { PlatformServices } from "./shared/platform.ts"
 import { commandProjects } from "./commands/projects.ts"
 import { commandSh } from "./commands/sh.ts"
 import { commandAgents } from "./commands/agents.ts"
-import { ClankaModels } from "./ClankaModels.ts"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -40,7 +39,7 @@ commandRoot.pipe(
   Command.run({
     version: PackageJson.version,
   }),
-  Effect.provide([ClankaModels.layer, PlatformServices]),
+  Effect.provide(PlatformServices),
   Effect.provideService(Layer.CurrentMemoMap, lalphMemoMap),
   NodeRuntime.runMain,
 )

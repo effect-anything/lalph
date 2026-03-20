@@ -58,7 +58,6 @@ import { getDefaultCliAgentPreset } from "../Presets.ts"
 import type { QuitError } from "effect/Terminal"
 import type { TimeoutError } from "effect/Cause"
 import type { ChildProcessSpawner } from "effect/unstable/process"
-import { ClankaModels } from "../ClankaModels.ts"
 import type { AiError } from "effect/unstable/ai/AiError"
 import type { PrdIssue } from "../domain/PrdIssue.ts"
 import { CurrentTaskRef } from "../TaskTools.ts"
@@ -103,7 +102,6 @@ const run = Effect.fnUntraced(
     | PromptGen
     | Prd
     | Worktree
-    | ClankaModels
     | OutputFormatter.Muxer
     | Scope.Scope
   > {
@@ -382,7 +380,6 @@ const runRalph = Effect.fnUntraced(
     | PromptGen
     | Prd
     | Worktree
-    | ClankaModels
     | OutputFormatter.Muxer
     | Scope.Scope
   > {

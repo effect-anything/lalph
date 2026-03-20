@@ -12,7 +12,7 @@ import {
   Stream,
 } from "effect"
 import { TaskChooseTools, TaskTools, TaskToolsHandlers } from "./TaskTools.ts"
-import { ClankaModels } from "./ClankaModels.ts"
+import { layerClankaModel, ModelServices } from "./ClankaModels.ts"
 import { withStallTimeout } from "./shared/stream.ts"
 import { NodeHttpClient } from "@effect/platform-node"
 import type { Prompt } from "effect/unstable/ai"
@@ -129,8 +129,8 @@ export const runClanka = Effect.fnUntraced(
             : options.mode === "choose"
               ? TaskChooseTools
               : TaskTools,
-      }).pipe(Layer.merge(ClankaModels.get(options.model))),
+      }).pipe(Layer.merge(layerClankaModel(options.model))),
       { local: true },
     ),
-  Effect.provide([NodeHttpClient.layerUndici, TaskToolsHandlers]),
+  Effect.provide([ModelServices, TaskToolsHandlers]),
 )

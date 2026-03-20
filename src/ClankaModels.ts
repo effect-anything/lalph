@@ -1,7 +1,7 @@
 // oxlint-disable typescript/no-explicit-any
 import { NodeHttpClient, NodeSocket } from "@effect/platform-node"
 import { Agent, Codex, Copilot } from "clanka"
-import { Effect, flow, Layer, LayerMap, Schema } from "effect"
+import { Effect, flow, Layer, Schema } from "effect"
 import { layerKvs } from "./Kvs.ts"
 
 export const ModelServices = NodeHttpClient.layerUndici.pipe(
@@ -20,11 +20,9 @@ const parseInput = flow(
   Effect.orDie,
 )
 
-export class ClankaModels extends LayerMap.Service<ClankaModels>()(
-  "lalph/ClankaModels",
-  {
-    dependencies: [ModelServices],
-    lookup: Effect.fnUntraced(function* (input: string) {
+export const layerClankaModel = (input: string) =>
+  Layer.unwrap(
+    Effect.gen(function* () {
       const [provider, model, reasoning] = yield* parseInput(input.split("/"))
       const layer = resolve(provider, model, reasoning)
       return Layer.merge(
@@ -39,9 +37,8 @@ export class ClankaModels extends LayerMap.Service<ClankaModels>()(
               ),
         ),
       )
-    }, Layer.unwrap),
-  },
-) {}
+    }),
+  )
 
 const resolve = (
   provider: "openai" | "copilot",
