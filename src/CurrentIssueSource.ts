@@ -17,7 +17,7 @@ import { GithubIssueSource } from "./Github.ts"
 import { IssuesChange, IssueSource } from "./IssueSource.ts"
 import { PlatformServices } from "./shared/platform.ts"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
-import type { Project, ProjectId } from "./domain/Project.ts"
+import type { ProjectId } from "./domain/Project.ts"
 import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 
 const issueSources: ReadonlyArray<typeof CurrentIssueSource.Service> = [
@@ -202,17 +202,6 @@ const getCurrentIssues = (projectId: ProjectId) =>
     pipe(s.ref(projectId), Effect.flatMap(SubscriptionRef.get)),
   )
 
-export const checkForWork = Effect.fnUntraced(function* (project: Project) {
-  if (project.gitFlow === "ralph") return
-  const { issues } = yield* getCurrentIssues(project.id)
-  const hasIncomplete = issues.some(
-    (issue) => issue.state === "todo" && issue.blockedBy.length === 0,
-  )
-  if (!hasIncomplete) {
-    return yield* new NoMoreWork({})
-  }
-})
-
 export const resetInProgress = Effect.gen(function* () {
   const source = yield* IssueSource
   const projectId = yield* CurrentProjectId
@@ -233,11 +222,3 @@ export const resetInProgress = Effect.gen(function* () {
     { concurrency: 5, discard: true },
   )
 })
-
-export class NoMoreWork extends Schema.ErrorClass<NoMoreWork>(
-  "lalph/Prd/NoMoreWork",
-)({
-  _tag: Schema.tag("NoMoreWork"),
-}) {
-  readonly message = "No more work to be done!"
-}

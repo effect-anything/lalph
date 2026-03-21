@@ -24,11 +24,7 @@ import { Prd } from "../Prd.ts"
 import { Worktree } from "../Worktree.ts"
 import { Flag, Command, Prompt } from "effect/unstable/cli"
 import { IssueSource, IssueSourceError } from "../IssueSource.ts"
-import {
-  checkForWork,
-  CurrentIssueSource,
-  resetInProgress,
-} from "../CurrentIssueSource.ts"
+import { CurrentIssueSource, resetInProgress } from "../CurrentIssueSource.ts"
 import { GithubCli } from "../Github/Cli.ts"
 import { agentWorker } from "../Agents/worker.ts"
 import { agentChooser, ChosenTaskNotFound } from "../Agents/chooser.ts"
@@ -542,6 +538,8 @@ const runProject = Effect.fnUntraced(
     const iterationsDisplay = isFinite ? options.iterations : "unlimited"
     const semaphore = Semaphore.makeUnsafe(options.project.concurrency)
     const fibers = yield* FiberSet.make()
+    const source = yield* IssueSource
+    const issuesRef = yield* source.ref(options.project.id)
 
     let executionMode: ProjectExecutionMode
     if (options.project.gitFlow === "ralph") {
@@ -594,28 +592,6 @@ const runProject = Effect.fnUntraced(
       })
     }
 
-    const handleNoMoreWork = (
-      currentIteration: number,
-      setIterations: (iterations: number) => void,
-    ) => {
-      if (executionMode._tag === "ralph") {
-        return Effect.void
-      }
-      if (isFinite) {
-        // If we have a finite number of iterations, we exit when no more
-        // work is found
-        setIterations(currentIteration)
-        return Effect.log(
-          `No more work to process, ending after ${currentIteration} iteration(s).`,
-        )
-      }
-      const log =
-        Iterable.size(fibers) <= 1
-          ? Effect.log("No more work to process, waiting 30 seconds...")
-          : Effect.void
-      return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
-    }
-
     yield* resetInProgress.pipe(Effect.withSpan("Main.resetInProgress"))
 
     yield* Effect.log(
@@ -627,6 +603,33 @@ const runProject = Effect.fnUntraced(
     let quit = false
 
     yield* Atom.mount(activeWorkerLoggingAtom)
+
+    const waitForWork =
+      executionMode._tag === "ralph"
+        ? Effect.void
+        : SubscriptionRef.changes(issuesRef).pipe(
+            Stream.takeUntilEffect(
+              Effect.fnUntraced(function* ({ issues }) {
+                const hasIncomplete = issues.some(
+                  (issue) =>
+                    issue.state === "todo" && issue.blockedBy.length === 0,
+                )
+                if (hasIncomplete) return true
+                if (isFinite) {
+                  quit = true
+                  yield* Effect.log(
+                    `No more work to process, ending after ${iteration} iteration(s).`,
+                  )
+                  return yield* Effect.interrupt
+                }
+                if (Iterable.size(fibers) <= 1) {
+                  yield* Effect.log("No more work to process")
+                }
+                return false
+              }),
+            ),
+            Stream.runDrain,
+          )
 
     while (true) {
       yield* semaphore.take(1)
@@ -640,7 +643,7 @@ const runProject = Effect.fnUntraced(
       let ralphDone = false
 
       const gitFlowLayer = resolveGitFlowLayer()
-      const fiber = yield* checkForWork(options.project).pipe(
+      const fiber = yield* waitForWork.pipe(
         Effect.andThen(
           resolveRunEffect(startedDeferred).pipe(
             Effect.provide(gitFlowLayer, { local: true }),
@@ -656,11 +659,6 @@ const runProject = Effect.fnUntraced(
             return Effect.log(
               `No more work to process for Ralph, ending after ${currentIteration + 1} iteration(s).`,
             )
-          },
-          NoMoreWork(_error) {
-            return handleNoMoreWork(currentIteration, (newIterations) => {
-              iterations = newIterations
-            })
           },
           QuitError(_error) {
             quit = true
