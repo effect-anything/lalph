@@ -92,7 +92,7 @@ export class IssueSource extends ServiceMap.Service<
     ) => Effect.Effect<void, IssueSourceError>
   }
 >()("lalph/IssueSource") {
-  static make(impl: Omit<IssueSource["Service"], "ref">) {
+  static make(impl: Omit<IssueSource["Service"], "ref" | "findById">) {
     return Effect.gen(function* () {
       const refs = yield* ScopedCache.make({
         lookup: Effect.fnUntraced(function* (projectId: ProjectId) {
@@ -143,6 +143,11 @@ export class IssueSource extends ServiceMap.Service<
         ...impl,
         ref: (projectId) => ScopedCache.get(refs, projectId),
         issues: updateIssues,
+        findById: Effect.fnUntraced(function* (projectId, issueId) {
+          const ref = yield* ScopedCache.get(refs, projectId)
+          const { issues } = yield* SubscriptionRef.get(ref)
+          return issues.find((issue) => issue.id === issueId) ?? null
+        }),
         createIssue: (projectId, issue) =>
           pipe(
             impl.createIssue(projectId, issue),
