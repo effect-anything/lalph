@@ -8,15 +8,14 @@ import {
   Schema,
   ScopedRef,
   ServiceMap,
+  SubscriptionRef,
 } from "effect"
-import { CurrentProjectId, Setting, Settings } from "./Settings.ts"
+import { allProjects, CurrentProjectId, Setting, Settings } from "./Settings.ts"
 import { LinearIssueSource } from "./Linear.ts"
 import { Prompt } from "effect/unstable/cli"
 import { GithubIssueSource } from "./Github.ts"
-import { IssueSource } from "./IssueSource.ts"
+import { IssuesChange, IssueSource } from "./IssueSource.ts"
 import { PlatformServices } from "./shared/platform.ts"
-import { atomRuntime } from "./shared/runtime.ts"
-import { Atom, Reactivity } from "effect/unstable/reactivity"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
 import type { ProjectId } from "./domain/Project.ts"
 import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -76,6 +75,7 @@ export class CurrentIssueSource extends ServiceMap.Service<
 >()("lalph/CurrentIssueSource") {
   static layer = Layer.effectServices(
     Effect.gen(function* () {
+      const settings = yield* Settings
       const source = yield* getOrSelectIssueSource
       const build = Layer.build(source.layer).pipe(
         Effect.map(ServiceMap.get(IssueSource)),
@@ -88,8 +88,36 @@ export class CurrentIssueSource extends ServiceMap.Service<
       const refresh = ScopedRef.set(ref, build).pipe(
         Effect.provideServices(services),
       )
+      const unlessRalph =
+        <B>(projectId: ProjectId, orElse: Effect.Effect<B>) =>
+        <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A | B, E, R> =>
+          settings.get(allProjects).pipe(
+            Effect.map(
+              Option.filter((projects) =>
+                projects.some(
+                  (p) => p.id === projectId && p.gitFlow === "ralph",
+                ),
+              ),
+            ),
+            Effect.flatMap(
+              Option.match({
+                onNone: (): Effect.Effect<A | B, E, R> => effect,
+                onSome: () => orElse,
+              }),
+            ),
+          )
 
       const proxy = IssueSource.of({
+        ref: (projectId) =>
+          ScopedRef.get(ref).pipe(
+            Effect.flatMap((source) => source.ref(projectId)),
+            unlessRalph(
+              projectId,
+              SubscriptionRef.make<IssuesChange>(
+                IssuesChange.Internal({ issues: [] }),
+              ),
+            ),
+          ),
         issues: (projectId) =>
           ScopedRef.get(ref).pipe(
             Effect.flatMap((source) => source.issues(projectId)),
@@ -100,18 +128,27 @@ export class CurrentIssueSource extends ServiceMap.Service<
               ).pipe(Effect.andThen(Effect.ignore(refresh))),
             ),
             Effect.retry(refreshSchedule),
+            unlessRalph(projectId, Effect.succeed([])),
+          ),
+        findById: (projectId, issueId) =>
+          ScopedRef.get(ref).pipe(
+            Effect.flatMap((source) => source.findById(projectId, issueId)),
+            unlessRalph(projectId, Effect.succeed(null)),
           ),
         createIssue: (projectId, options) =>
           ScopedRef.get(ref).pipe(
             Effect.flatMap((source) => source.createIssue(projectId, options)),
+            unlessRalph(projectId, Effect.interrupt),
           ),
         updateIssue: (options) =>
           ScopedRef.get(ref).pipe(
             Effect.flatMap((source) => source.updateIssue(options)),
+            unlessRalph(options.projectId, Effect.void),
           ),
         cancelIssue: (projectId, issueId) =>
           ScopedRef.get(ref).pipe(
             Effect.flatMap((source) => source.cancelIssue(projectId, issueId)),
+            unlessRalph(projectId, Effect.void),
           ),
         reset: ScopedRef.get(ref).pipe(
           Effect.flatMap((source) => source.reset),
@@ -119,10 +156,12 @@ export class CurrentIssueSource extends ServiceMap.Service<
         settings: (projectId) =>
           ScopedRef.get(ref).pipe(
             Effect.flatMap((source) => source.settings(projectId)),
+            unlessRalph(projectId, Effect.void),
           ),
         info: (projectId) =>
           ScopedRef.get(ref).pipe(
             Effect.flatMap((source) => source.info(projectId)),
+            unlessRalph(projectId, Effect.void),
           ),
         issueCliAgentPreset: (issue) =>
           ScopedRef.get(ref).pipe(
@@ -141,6 +180,7 @@ export class CurrentIssueSource extends ServiceMap.Service<
             Effect.flatMap((source) =>
               source.ensureInProgress(projectId, issueId),
             ),
+            unlessRalph(projectId, Effect.void),
           ),
       })
 
@@ -155,48 +195,17 @@ const refreshSchedule = Schedule.exponential(100, 1.5).pipe(
   Schedule.either(Schedule.spaced("30 seconds")),
 )
 
-// Atoms
-
-export const issueSourceRuntime = atomRuntime(
-  CurrentIssueSource.layer.pipe(Layer.orDie),
-)
-
-export const currentIssuesAtom = Atom.family((projectId: ProjectId) =>
-  pipe(
-    issueSourceRuntime.atom(
-      IssueSource.use((s) => s.issues(projectId)).pipe(
-        Effect.withSpan("currentIssuesAtom"),
-      ),
-    ),
-    atomRuntime.withReactivity([`issues:${projectId}`]),
-    Atom.withRefresh("30 seconds"),
-    Atom.keepAlive,
-  ),
-)
-
 // Helpers
 
 const getCurrentIssues = (projectId: ProjectId) =>
-  Atom.getResult(currentIssuesAtom(projectId), {
-    suspendOnWaiting: true,
-  })
-
-export const checkForWork = Effect.gen(function* () {
-  const projectId = yield* CurrentProjectId
-  const issues = yield* getCurrentIssues(projectId)
-  const hasIncomplete = issues.some(
-    (issue) => issue.state === "todo" && issue.blockedBy.length === 0,
+  IssueSource.use((s) =>
+    pipe(s.ref(projectId), Effect.flatMap(SubscriptionRef.get)),
   )
-  if (!hasIncomplete) {
-    return yield* new NoMoreWork({})
-  }
-})
 
 export const resetInProgress = Effect.gen(function* () {
   const source = yield* IssueSource
-  const reactivity = yield* Reactivity.Reactivity
   const projectId = yield* CurrentProjectId
-  const issues = yield* getCurrentIssues(projectId)
+  const { issues } = yield* getCurrentIssues(projectId)
   const inProgress = issues.filter(
     (issue): issue is PrdIssue & { id: string } =>
       issue.state === "in-progress" && issue.id !== null,
@@ -211,13 +220,5 @@ export const resetInProgress = Effect.gen(function* () {
         state: "todo",
       }),
     { concurrency: 5, discard: true },
-  ).pipe(reactivity.withBatch)
+  )
 })
-
-export class NoMoreWork extends Schema.ErrorClass<NoMoreWork>(
-  "lalph/Prd/NoMoreWork",
-)({
-  _tag: Schema.tag("NoMoreWork"),
-}) {
-  readonly message = "No more work to be done!"
-}

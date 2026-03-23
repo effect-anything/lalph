@@ -10,12 +10,12 @@ import {
   Semaphore,
   ServiceMap,
   Stream,
+  SubscriptionRef,
 } from "effect"
 import { Worktree } from "./Worktree.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
-import { AtomRegistry, Reactivity } from "effect/unstable/reactivity"
-import { CurrentIssueSource, currentIssuesAtom } from "./CurrentIssueSource.ts"
+import { CurrentIssueSource } from "./CurrentIssueSource.ts"
 import { CurrentProjectId, Settings } from "./Settings.ts"
 
 export class Prd extends ServiceMap.Service<
@@ -46,9 +46,7 @@ export class Prd extends ServiceMap.Service<
     const worktree = yield* Worktree
     const pathService = yield* Path.Path
     const fs = yield* FileSystem.FileSystem
-    const reactivity = yield* Reactivity.Reactivity
     const source = yield* IssueSource
-    const registry = yield* AtomRegistry.AtomRegistry
     const projectId = yield* CurrentProjectId
 
     let chosenIssueId: string | null = null
@@ -60,10 +58,9 @@ export class Prd extends ServiceMap.Service<
       const yaml = yield* fs.readFileString(prdFile)
       return PrdIssue.arrayFromYaml(yaml)
     })
-    const getCurrentIssues = AtomRegistry.getResult(
-      registry,
-      currentIssuesAtom(projectId),
-      { suspendOnWaiting: true },
+    const issuesRef = yield* source.ref(projectId)
+    const getCurrentIssues = SubscriptionRef.get(issuesRef).pipe(
+      Effect.map((i) => i.issues),
     )
 
     const syncSemaphore = Semaphore.makeUnsafe(1)
@@ -205,7 +202,6 @@ export class Prd extends ServiceMap.Service<
         { concurrency: "unbounded" },
       )
     }).pipe(
-      reactivity.withBatch,
       Effect.uninterruptible,
       syncSemaphore.withPermit,
       Effect.withSpan("Prd.sync"),
@@ -233,6 +229,7 @@ export class Prd extends ServiceMap.Service<
     )
 
     yield* fs.watch(lalphDir).pipe(
+      Stream.filter((event) => event.path.endsWith("prd.yml")),
       Stream.debounce(50),
       Stream.runForEach((_) =>
         FiberHandle.clear(updateSyncHandle).pipe(
@@ -243,10 +240,10 @@ export class Prd extends ServiceMap.Service<
       Effect.forkScoped,
     )
 
-    yield* AtomRegistry.toStreamResult(
-      registry,
-      currentIssuesAtom(projectId),
-    ).pipe(Stream.runForEach(updateSync), Effect.forkScoped)
+    yield* SubscriptionRef.changes(issuesRef).pipe(
+      Stream.runForEach((s) => updateSync(s.issues)),
+      Effect.forkScoped,
+    )
 
     const findById = Effect.fnUntraced(function* (issueId: string) {
       const current = yield* getCurrentIssues
@@ -278,21 +275,21 @@ export class Prd extends ServiceMap.Service<
   static layerNoWorktree = Layer.effect(this, this.make)
   static layer = this.layerNoWorktree.pipe(Layer.provideMerge(Worktree.layer))
   static layerProvided = this.layer.pipe(
-    Layer.provide([
-      AtomRegistry.layer,
-      Reactivity.layer,
-      CurrentIssueSource.layer,
-      Settings.layer,
-    ]),
+    Layer.provide([CurrentIssueSource.layer, Settings.layer]),
   )
   static layerLocal = this.layerNoWorktree.pipe(
     Layer.provideMerge(Worktree.layerLocal),
   )
   static layerLocalProvided = this.layerLocal.pipe(
-    Layer.provide([
-      AtomRegistry.layer,
-      Reactivity.layer,
-      CurrentIssueSource.layer,
-    ]),
+    Layer.provide([CurrentIssueSource.layer]),
   )
+  static layerNoop = Layer.succeed(this, {
+    path: "",
+    maybeRevertIssue: () => Effect.void,
+    revertUpdatedIssues: Effect.void,
+    flagUnmergable: () => Effect.void,
+    findById: () => Effect.succeed(null),
+    setChosenIssueId: () => Effect.void,
+    setAutoMerge: () => Effect.void,
+  })
 }

@@ -74,7 +74,7 @@ export class GitFlow extends ServiceMap.Service<
 export type GitFlowLayer = Layer.Layer<
   GitFlow,
   never,
-  Layer.Services<typeof GitFlowPR | typeof GitFlowCommit>
+  Layer.Services<typeof GitFlowPR | typeof GitFlowCommit | typeof GitFlowRalph>
 >
 
 const setupInstructionsForPr = (
@@ -408,6 +408,136 @@ But you **do not** need to push your changes or switch workspaces, and you shoul
   }),
 ).pipe(Layer.provide(AtomRegistry.layer))
 
+export const GitFlowRalph = Layer.effect(
+  GitFlow,
+  Effect.gen(function* () {
+    const currentWorker = yield* CurrentWorkerState
+    const repository = yield* getCurrentRepository
+    const projectId = yield* CurrentProjectId
+    const project = yield* projectById(projectId)
+    const checkoutMode = Option.match(project, {
+      onNone: () => "worktree" as const,
+      onSome: (project) => project.checkoutMode,
+    })
+    const workerState = yield* Atom.get(currentWorker.state)
+
+    return GitFlow.of({
+      requiresGithubPr: false,
+      branch: `lalph/worker-${workerState.id}-${Date.now()}`,
+
+      setupInstructions: () =>
+        repository.kind === "git"
+          ? checkoutMode === "worktree"
+            ? `You are already in an isolated checkout for this task. Do not switch to another repository while working.`
+            : `Work directly on the current branch for this task. Do not create or switch to a temporary worktree.`
+          : checkoutMode === "worktree"
+            ? `You are already in an isolated jj workspace for this task. Do not switch workspaces while working.`
+            : `A jj change has already been created for this task in the current workspace. Work directly in that change and do not create or switch to a temporary workspace.`,
+
+      completionAction:
+        repository.kind === "git" ? "committing" : "updating the jj change",
+
+      commitInstructions: () =>
+        repository.kind === "git"
+          ? `When you have completed your changes, **you must** commit them to the current local branch. Do not git push your changes or switch branches.
+   - Write commit messages in English.
+   - **DO NOT** commit any of the files in the \`.lalph\` directory.`
+          : `When you have completed your changes, **you must** update the current jj change using \`jj describe -m\`. Do not use \`jj commit -m\`, do not push your changes, and do not switch workspaces.
+   - Keep the task title visible in the first line of the jj change description.
+   - Write the jj change description in English.
+   - **DO NOT** commit any of the files in the \`.lalph\` directory.`,
+
+      reviewInstructions:
+        repository.kind === "git"
+          ? `You are already on the branch with their changes.
+After making any changes, **you must** commit them to the same branch.
+But you **do not** need to git push your changes or switch branches.
+
+ - Write commit messages in English.
+ - **DO NOT** commit any of the files in the \`.lalph\` directory.
+ - You have full permission to create git commits.`
+          : `You are already on the jj change with their work.
+After making any changes, **you must** update the same jj change with \`jj describe -m\`.
+But you **do not** need to push your changes or switch workspaces, and you should not create a new jj change.
+
+ - Keep the task title visible in the first line of the jj change description.
+ - Write the jj change description in English.
+ - **DO NOT** commit any of the files in the \`.lalph\` directory.
+ - You have full permission to create jj commits.`,
+
+      postWork: Effect.fnUntraced(function* ({ worktree, targetBranch }) {
+        if (!targetBranch) {
+          return yield* Effect.logWarning(
+            "GitFlowRalph: No target branch specified, skipping postWork.",
+          )
+        }
+
+        const parsed = yield* resolveTargetBranch({
+          repository: worktree.repository,
+          targetBranch,
+        })
+
+        if (worktree.repository.kind === "git") {
+          if (Option.isSome(parsed.remote)) {
+            yield* worktree.exec`git fetch ${parsed.remote.value}`
+          }
+          yield* worktree.exec`git restore --worktree .`
+
+          const rebaseResult =
+            yield* worktree.exec`git rebase ${parsed.branchWithRemote}`
+          if (rebaseResult !== 0) {
+            return yield* new GitFlowError({
+              message: `Failed to rebase onto ${parsed.branchWithRemote}. Aborting task.`,
+            })
+          }
+
+          if (Option.isSome(parsed.remote)) {
+            const pushResult =
+              yield* worktree.exec`git push ${parsed.remote.value} ${`HEAD:${parsed.branch}`}`
+            if (pushResult !== 0) {
+              return yield* new GitFlowError({
+                message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
+              })
+            }
+          }
+          return
+        }
+
+        if (Option.isSome(parsed.remote)) {
+          yield* worktree.exec`jj git fetch --remote ${parsed.remote.value} --branch ${parsed.branch}`
+          yield* worktree.exec`jj bookmark track ${parsed.branch} --remote ${parsed.remote.value}`
+        }
+        const rebaseResult =
+          yield* worktree.exec`jj rebase --branch ${"@"} --onto ${targetBranchToJjBookmark(parsed)}`
+        if (rebaseResult !== 0) {
+          return yield* new GitFlowError({
+            message: `Failed to rebase onto ${targetBranchToJjBookmark(parsed)}. Aborting task.`,
+          })
+        }
+        const setBookmarkResult =
+          yield* worktree.exec`jj bookmark set ${parsed.branch} --revision ${"@"}`
+        if (setBookmarkResult !== 0) {
+          return yield* new GitFlowError({
+            message: `Failed to update jj bookmark ${parsed.branch}. Aborting task.`,
+          })
+        }
+
+        if (Option.isSome(parsed.remote)) {
+          const pushResult =
+            yield* worktree.exec`jj git push --remote ${parsed.remote.value} --bookmark ${parsed.branch}`
+          if (pushResult !== 0) {
+            return yield* new GitFlowError({
+              message: `Failed to push jj bookmark ${targetBranchToJjRevision(parsed)}. Aborting task.`,
+            })
+          }
+        }
+      }),
+      autoMerge: () => Effect.void,
+    })
+  }),
+).pipe(Layer.provide(AtomRegistry.layer))
+
+// Errors
 export class GitFlowError extends Data.TaggedError("GitFlowError")<{
   message: string
 }> {}

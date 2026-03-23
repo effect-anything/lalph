@@ -12,14 +12,12 @@ import { commandSource } from "./commands/source.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { TracingLayer } from "./Tracing.ts"
 import { MinimumLogLevel } from "effect/References"
-import { atomRuntime, lalphMemoMap } from "./shared/runtime.ts"
 import { PlatformServices } from "./shared/platform.ts"
 import { commandProjects } from "./commands/projects.ts"
 import { commandSh } from "./commands/sh.ts"
 import { commandAgents } from "./commands/agents.ts"
 import { commandHooks } from "./commands/hooks.ts"
 import { commandWorktree } from "./commands/worktree.ts"
-import { ClankaModels } from "./ClankaModels.ts"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -37,14 +35,11 @@ commandRoot.pipe(
   Command.provide(TracingLayer),
   Command.provide(({ verbose }) => {
     if (!verbose) return Layer.empty
-    const logLevel = Layer.succeed(MinimumLogLevel, "All")
-    atomRuntime.addGlobalLayer(logLevel)
-    return logLevel
+    return Layer.succeed(MinimumLogLevel, "All")
   }),
   Command.run({
     version: PackageJson.version,
   }),
-  Effect.provide([ClankaModels.layer, PlatformServices]),
-  Effect.provideService(Layer.CurrentMemoMap, lalphMemoMap),
+  Effect.provide(PlatformServices),
   NodeRuntime.runMain,
 )

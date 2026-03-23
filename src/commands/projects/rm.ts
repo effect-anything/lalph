@@ -1,7 +1,7 @@
 import { Effect, FileSystem, Option, Path } from "effect"
 import { Command } from "effect/unstable/cli"
-import { allProjects, getAllProjects, selectProject } from "../../Projects.ts"
-import { Settings } from "../../Settings.ts"
+import { getAllProjects, selectProject } from "../../Projects.ts"
+import { allProjects, Settings } from "../../Settings.ts"
 import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
 
 export const commandProjectsRm = Command.make("rm").pipe(

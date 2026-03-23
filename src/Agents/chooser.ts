@@ -39,14 +39,14 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
       model: options.preset.extraArgs.join(" "),
       prompt: promptGen.promptChooseClanka({ gitFlow }),
       stallTimeout: options.stallTimeout,
-      withChoose: true,
+      mode: "choose",
     }).pipe(
       Effect.provideService(ChosenTaskDeferred, deferred),
       Effect.flatMap(() => Effect.fail(new ChosenTaskNotFound())),
       Effect.raceFirst(Deferred.await(deferred)),
     )
     const prdTask = yield* prd.findById(result.taskId)
-    if (!prdTask) throw new ChosenTaskNotFound()
+    if (!prdTask) return yield* new ChosenTaskNotFound()
     return {
       id: result.taskId,
       githubPrNumber: result.githubPrNumber ?? null,

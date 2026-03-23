@@ -1,12 +1,12 @@
 // oxlint-disable typescript/no-explicit-any
 import { NodeHttpClient, NodeSocket } from "@effect/platform-node"
 import { Agent, Codex, Copilot } from "clanka"
-import { Effect, flow, Layer, LayerMap, Schema } from "effect"
+import { Effect, flow, Layer, Schema } from "effect"
 import * as AnthropicApi from "./ClankaAnthropicApi.ts"
 import * as OpenAiApi from "./ClankaOpenAiApi.ts"
 import { layerKvs } from "./Kvs.ts"
 
-export const ModelServices = NodeHttpClient.layerFetch.pipe(
+export const ModelServices = NodeHttpClient.layerUndici.pipe(
   Layer.merge(layerKvs),
 )
 
@@ -17,6 +17,7 @@ const Provider = Schema.Literals([
   "openai-api",
   "anthropic-api",
 ])
+
 const parseInput = flow(
   Schema.decodeUnknownEffect(
     Schema.Tuple([Provider, Schema.String, Reasoning]),
@@ -24,19 +25,9 @@ const parseInput = flow(
   Effect.orDie,
 )
 
-export const clankaSubagent = Effect.fnUntraced(function* (
-  models: ClankaModels["Service"],
-  input: string,
-) {
-  const [provider, model] = yield* parseInput(input.split("/"))
-  return models.get(`${provider}/${model}/low`)
-}, Layer.unwrap)
-
-export class ClankaModels extends LayerMap.Service<ClankaModels>()(
-  "lalph/ClankaModels",
-  {
-    dependencies: [ModelServices],
-    lookup: Effect.fnUntraced(function* (input: string) {
+export const layerClankaModel = (input: string) =>
+  Layer.unwrap(
+    Effect.gen(function* () {
       const [provider, model, reasoning] = yield* parseInput(input.split("/"))
       const layer = resolve(provider, model, reasoning)
       return Layer.merge(
@@ -44,16 +35,15 @@ export class ClankaModels extends LayerMap.Service<ClankaModels>()(
         Agent.layerSubagentModel(
           reasoning === "low"
             ? layer
-            : resolve(
+            : resolveSubagent(
                 provider,
                 model,
                 reasoning === "medium" ? "low" : "medium",
               ),
         ),
       )
-    }, Layer.unwrap),
-  },
-) {}
+    }),
+  )
 
 const resolve = (
   provider: typeof Provider.Type,
@@ -95,6 +85,48 @@ const resolve = (
     }
   }
 }
+
+const resolveSubagent = (
+  provider: typeof Provider.Type,
+  model: string,
+  reasoning: typeof Reasoning.Type,
+) => {
+  switch (provider) {
+    case "openai": {
+      return Codex.modelWebSocket("gpt-5.4-mini", {
+        reasoning: {
+          effort: "high",
+        },
+      }).pipe(
+        Layer.provide(NodeSocket.layerWebSocketConstructorWS),
+        Layer.provide(Codex.layerClient),
+      )
+    }
+    case "copilot": {
+      return Copilot.model(model, {
+        ...reasoningToCopilotConfig(model, reasoning),
+      }).pipe(Layer.provide(Copilot.layerClient))
+    }
+    case "openai-api": {
+      return OpenAiApi.model(model, {
+        reasoning: {
+          effort: reasoning,
+        },
+      })
+    }
+    case "anthropic-api": {
+      return AnthropicApi.model(model, {
+        cache_control: {
+          type: "ephemeral",
+        },
+        output_config: {
+          effort: reasoningToAnthropicEffort(reasoning),
+        },
+      })
+    }
+  }
+}
+
 const reasoningToCopilotConfig = (
   model: string,
   reasoning: typeof Reasoning.Type,

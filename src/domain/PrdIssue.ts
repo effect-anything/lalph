@@ -107,6 +107,7 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
   }
 
   update(options: {
+    readonly id?: string | undefined
     readonly title?: string | undefined
     readonly description?: string | undefined
     readonly state?: PrdIssue["state"] | undefined
@@ -114,6 +115,7 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
   }): PrdIssue {
     return new PrdIssue({
       ...this,
+      id: options.id ?? this.id,
       title: options.title ?? this.title,
       description: options.description ?? this.description,
       state: options.state ?? this.state,

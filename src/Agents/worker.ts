@@ -5,6 +5,7 @@ import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import { runClanka } from "../Clanka.ts"
 import { ExitCode } from "effect/unstable/process/ChildProcessSpawner"
 import { Prompt } from "effect/unstable/ai"
+import { CurrentTask } from "../domain/CurrentTask.ts"
 
 export const agentWorker = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
@@ -13,9 +14,16 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
   readonly prompt: string
   readonly research: Option.Option<string>
   readonly steer?: Stream.Stream<string>
+  readonly maxContext?: number | undefined
+  readonly currentTask: CurrentTask
 }) {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
+
+  const prdFilePath = CurrentTask.$match(options.currentTask, {
+    task: () => pathService.join(".lalph", "prd.yml"),
+    ralph: () => undefined,
+  })
 
   // use clanka
   if (!options.preset.cliAgent.command) {
@@ -41,7 +49,12 @@ ${research}`,
           ]),
       }),
       stallTimeout: options.stallTimeout,
+      maxContext: options.maxContext,
       steer: options.steer,
+      mode: CurrentTask.$match(options.currentTask, {
+        task: () => "default" as const,
+        ralph: () => "ralph" as const,
+      }),
     })
     return ExitCode(0)
   }
@@ -49,7 +62,7 @@ ${research}`,
   const cliCommand = pipe(
     options.preset.cliAgent.command({
       prompt: options.prompt,
-      prdFilePath: pathService.join(".lalph", "prd.yml"),
+      prdFilePath,
       extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),

@@ -24,6 +24,13 @@
             bun
             corepack
             nodejs
+            (python313.withPackages (ps:
+              with ps; [
+                httpx
+                requests
+                jinja2
+              ]))
+            clang
           ];
         };
       }

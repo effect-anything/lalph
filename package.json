@@ -1,7 +1,7 @@
 {
   "name": "@effect-x/lalph",
   "type": "module",
-  "version": "0.3.66",
+  "version": "0.3.104",
   "publishConfig": {
     "access": "public"
   },
@@ -32,29 +32,44 @@
     "url": "https://github.com/effect-anything/lalph/issues"
   },
   "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48",
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "tree-sitter": "^0.21.0",
+    "tree-sitter-javascript": "^0.23.1",
+    "tree-sitter-typescript": "^0.23.2"
+  },
+  "optionalDependencies": {
+    "@sqliteai/sqlite-vector-darwin-arm64": "0.9.93",
+    "@sqliteai/sqlite-vector-darwin-x86_64": "0.9.93",
+    "@sqliteai/sqlite-vector-linux-arm64": "0.9.93",
+    "@sqliteai/sqlite-vector-linux-arm64-musl": "0.9.93",
+    "@sqliteai/sqlite-vector-linux-x86_64": "0.9.93",
+    "@sqliteai/sqlite-vector-linux-x86_64-musl": "0.9.93",
+    "@sqliteai/sqlite-vector-win32-x86_64": "0.9.93"
+  },
   "devDependencies": {
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.30.0",
-    "@effect/ai-anthropic": "4.0.0-beta.33",
-    "@effect/ai-openai": "4.0.0-beta.33",
-    "@effect/ai-openai-compat": "4.0.0-beta.33",
-    "@effect/language-service": "^0.80.0",
-    "@effect/platform-node": "4.0.0-beta.33",
-    "@linear/sdk": "^77.0.0",
+    "@effect/ai-anthropic": "4.0.0-beta.37",
+    "@effect/ai-openai": "4.0.0-beta.37",
+    "@effect/ai-openai-compat": "4.0.0-beta.37",
+    "@effect/language-service": "^0.81.0",
+    "@effect/platform-node": "4.0.0-beta.37",
+    "@linear/sdk": "^78.0.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",
-    "@typescript/native-preview": "7.0.0-dev.20260315.1",
-    "clanka": "^0.1.15",
+    "@typescript/native-preview": "7.0.0-dev.20260322.1",
+    "clanka": "^0.2.33",
     "concurrently": "^9.2.1",
-    "effect": "4.0.0-beta.33",
+    "effect": "4.0.0-beta.37",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "octokit": "^5.0.5",
-    "oxlint": "^1.55.0",
+    "oxlint": "^1.56.0",
     "prettier": "^3.8.1",
-    "tsdown": "^0.21.3",
+    "tsdown": "^0.21.4",
     "typescript": "^5.9.3",
-    "yaml": "^2.8.2"
+    "yaml": "^2.8.3"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -67,7 +82,11 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@vscode/ripgrep"
+      "@vscode/ripgrep",
+      "better-sqlite3",
+      "tree-sitter",
+      "tree-sitter-javascript",
+      "tree-sitter-typescript"
     ]
   }
 }

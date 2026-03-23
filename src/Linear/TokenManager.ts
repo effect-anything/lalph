@@ -106,7 +106,12 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
           disableListenLog: true,
           disableLogger: true,
         }).pipe(
-          Layer.provide(NodeHttpServer.layer(createServer, { port: 34338 })),
+          Layer.provide(
+            NodeHttpServer.layer(createServer, {
+              port: 34338,
+              disablePreemptiveShutdown: true,
+            }),
+          ),
           Layer.build,
           Effect.orDie,
         )

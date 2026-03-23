@@ -14,7 +14,7 @@ import { Worktree } from "../Worktree.ts"
 import { Command, Flag } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../CurrentIssueSource.ts"
 import { commandRoot } from "./root.ts"
-import { CurrentProjectId, Settings } from "../Settings.ts"
+import { allProjects, CurrentProjectId, Settings } from "../Settings.ts"
 import { addOrUpdateProject, selectProject } from "../Projects.ts"
 import { agentPlanner } from "../Agents/planner.ts"
 import { agentTasker } from "../Agents/tasker.ts"
@@ -86,7 +86,7 @@ export const commandPlan = Command.make("plan", {
         // possible
         yield* Effect.gen(function* () {
           const project = withNewProject
-            ? yield* addOrUpdateProject()
+            ? yield* addOrUpdateProject(undefined, true)
             : yield* selectProject
           const { specsDirectory } = yield* commandRoot
           const preset = yield* selectCliAgentPreset
@@ -97,6 +97,7 @@ export const commandPlan = Command.make("plan", {
             targetBranch: project.targetBranch,
             dangerous,
             preset,
+            ralph: project.gitFlow === "ralph",
           }).pipe(Effect.provideService(CurrentProjectId, project.id))
         }).pipe(
           Effect.provide([
@@ -120,16 +121,19 @@ const plan = Effect.fnUntraced(
     readonly targetBranch: Option.Option<string>
     readonly dangerous: boolean
     readonly preset: CliAgentPreset
+    readonly ralph: boolean
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
+    const projectId = yield* CurrentProjectId
 
     yield* agentPlanner({
       plan: options.plan,
       specsDirectory: options.specsDirectory,
       dangerous: options.dangerous,
       preset: options.preset,
+      ralph: options.ralph,
     })
 
     const planDetails = yield* pipe(
@@ -140,6 +144,19 @@ const plan = Effect.fnUntraced(
       Effect.mapError(() => new SpecNotFound()),
     )
 
+    if (options.ralph) {
+      yield* Settings.update(
+        allProjects,
+        Option.map((projects) =>
+          projects.map((p) =>
+            p.id === projectId
+              ? p.update({ ralphSpec: planDetails.specification })
+              : p,
+          ),
+        ),
+      )
+    }
+
     if (Option.isSome(options.targetBranch)) {
       yield* commitAndPushSpecification({
         specsDirectory: options.specsDirectory,
@@ -147,13 +164,15 @@ const plan = Effect.fnUntraced(
       })
     }
 
-    yield* Effect.log("Converting specification into tasks")
+    if (!options.ralph) {
+      yield* Effect.log("Converting specification into tasks")
 
-    yield* agentTasker({
-      specificationPath: planDetails.specification,
-      specsDirectory: options.specsDirectory,
-      preset: options.preset,
-    })
+      yield* agentTasker({
+        specificationPath: planDetails.specification,
+        specsDirectory: options.specsDirectory,
+        preset: options.preset,
+      })
+    }
 
     if (worktree.mode === "worktree" && !worktree.inExisting) {
       yield* pipe(
@@ -167,13 +186,14 @@ const plan = Effect.fnUntraced(
     }
   },
   Effect.scoped,
-  Effect.provide([
-    PromptGen.layer,
-    Prd.layerProvided,
-    Worktree.layer,
-    Settings.layer,
-    CurrentIssueSource.layer,
-  ]),
+  (effect, options) =>
+    Effect.provide(effect, [
+      PromptGen.layer,
+      options.ralph ? Prd.layerNoop : Prd.layerProvided,
+      Worktree.layer,
+      Settings.layer,
+      CurrentIssueSource.layer,
+    ]),
 )
 
 export class SpecNotFound extends Data.TaggedError("SpecNotFound") {

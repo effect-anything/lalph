@@ -1,7 +1,7 @@
 import { Array, Effect, Option } from "effect"
 import { Command, Prompt } from "effect/unstable/cli"
-import { allProjects, getAllProjects } from "../../Projects.ts"
-import { Settings } from "../../Settings.ts"
+import { getAllProjects } from "../../Projects.ts"
+import { allProjects, Settings } from "../../Settings.ts"
 import { Project } from "../../domain/Project.ts"
 
 export const commandProjectsToggle = Command.make("toggle").pipe(

@@ -3,7 +3,7 @@ import { Cache, Effect, Layer, Option, Schema, ServiceMap } from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
 import { layerKvs, ProjectsKvs } from "./Kvs.ts"
 import { allCliAgents } from "./domain/CliAgent.ts"
-import { ProjectId } from "./domain/Project.ts"
+import { Project, ProjectId } from "./domain/Project.ts"
 import { Reactivity } from "effect/unstable/reactivity"
 
 export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
@@ -125,6 +125,17 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
   ) {
     return Settings.use((_) => _.set(setting, value))
   }
+  static update<Name extends string, S extends Schema.Codec<any, any>>(
+    setting: Setting<Name, S>,
+    f: (current: Option.Option<S["Type"]>) => Option.Option<S["Type"]>,
+  ) {
+    return Settings.use((_) =>
+      _.get(setting).pipe(
+        Effect.map(f),
+        Effect.flatMap((v) => _.set(setting, v)),
+      ),
+    )
+  }
 
   static getProject<Name extends string, S extends Schema.Codec<any, any>>(
     setting: ProjectSetting<Name, S>,
@@ -173,3 +184,5 @@ export const selectedCliAgentId = new Setting(
   "selectedCliAgentId",
   Schema.Literals(allCliAgents.map((a) => a.id)),
 )
+
+export const allProjects = new Setting("projects", Schema.Array(Project))

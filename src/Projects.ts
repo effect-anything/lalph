@@ -1,23 +1,14 @@
-import {
-  Array,
-  Data,
-  Effect,
-  Layer,
-  Option,
-  pipe,
-  Schema,
-  String,
-} from "effect"
+import { Array, Data, Effect, Layer, Option, pipe, String } from "effect"
+import { Prompt } from "effect/unstable/cli"
+import { CurrentIssueSource } from "./CurrentIssueSource.ts"
+import { IssueSource } from "./IssueSource.ts"
 import {
   Project,
   ProjectCheckoutMode,
   ProjectId,
   ProjectReviewCompletion,
 } from "./domain/Project.ts"
-import { CurrentProjectId, Setting, Settings } from "./Settings.ts"
-import { Prompt } from "effect/unstable/cli"
-import { IssueSource } from "./IssueSource.ts"
-import { CurrentIssueSource } from "./CurrentIssueSource.ts"
+import { allProjects, CurrentProjectId, Settings } from "./Settings.ts"
 
 export const layerProjectIdPrompt = Layer.effect(
   CurrentProjectId,
@@ -26,8 +17,6 @@ export const layerProjectIdPrompt = Layer.effect(
     return project.id
   }),
 ).pipe(Layer.provide(Settings.layer), Layer.provide(CurrentIssueSource.layer))
-
-export const allProjects = new Setting("projects", Schema.Array(Project))
 
 export const getAllProjects = Settings.get(allProjects).pipe(
   Effect.map(Option.getOrElse((): ReadonlyArray<Project> => [])),
@@ -43,8 +32,6 @@ export class ProjectNotFound extends Data.TaggedError("ProjectNotFound")<{
 }> {
   readonly message = `Project "${this.projectId}" not found`
 }
-
-// Prompts
 
 export const selectProject = Effect.gen(function* () {
   const projects = yield* getAllProjects
@@ -81,6 +68,7 @@ export const welcomeWizard = Effect.gen(function* () {
 
 export const addOrUpdateProject = Effect.fnUntraced(function* (
   existing?: Project,
+  fromPlanMode = false,
 ) {
   const projects = yield* getAllProjects
   const id = existing
@@ -127,6 +115,12 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
         value: "commit",
         selected: existing ? existing.gitFlow === "commit" : false,
       },
+      {
+        title: "Ralph",
+        description: "Tasks are determined from a spec file",
+        value: "ralph",
+        selected: existing ? existing.gitFlow === "ralph" : false,
+      },
     ] as const,
   })
   const checkoutMode = yield* Prompt.select({
@@ -153,6 +147,14 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
       readonly selected: boolean
     }>,
   })
+
+  let ralphSpec = Option.none<string>()
+  if (gitFlow === "ralph" && !fromPlanMode) {
+    ralphSpec = yield* Prompt.file({
+      message: "Path to Ralph spec file",
+    }).pipe(Effect.fromYieldable, Effect.map(Option.some))
+  }
+
   const researchAgent = yield* Prompt.toggle({
     message: "Enable research agent?",
     initial: existing ? existing.researchAgent : true,
@@ -192,6 +194,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     targetBranch,
     checkoutMode,
     gitFlow,
+    ralphSpec: Option.getOrUndefined(ralphSpec),
     researchAgent,
     reviewAgent,
     reviewCompletion,
@@ -207,7 +210,9 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
 
   const source = yield* IssueSource
   yield* source.reset.pipe(Effect.provideService(CurrentProjectId, project.id))
-  yield* source.settings(project.id)
+  if (gitFlow !== "ralph") {
+    yield* source.settings(project.id)
+  }
 
   return project
 })

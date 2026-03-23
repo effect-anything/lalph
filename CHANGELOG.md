@@ -1,10 +1,254 @@
 # lalph
 
+## 0.3.104
+
+### Patch Changes
+
+- [`406e4f3`](https://github.com/tim-smart/lalph/commit/406e4f34366d1416bdc5270158ef32cb420a048e) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.103
+
+### Patch Changes
+
+- [`bcb1978`](https://github.com/tim-smart/lalph/commit/bcb1978334f365e21267a9c7a44d39cb99dcd1e5) Thanks [@tim-smart](https://github.com/tim-smart)! - use sub ref for issues.findById
+
+## 0.3.102
+
+### Patch Changes
+
+- [`5525427`](https://github.com/tim-smart/lalph/commit/5525427d4e8135d1b05e914b4d6b1ac590a40245) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.101
+
+### Patch Changes
+
+- [`3f2e113`](https://github.com/tim-smart/lalph/commit/3f2e113a19b361f5ed49f6ad6a95e89fe0793cca) Thanks [@tim-smart](https://github.com/tim-smart)! - update the clanka
+
+## 0.3.100
+
+### Patch Changes
+
+- [`e847877`](https://github.com/tim-smart/lalph/commit/e8478779bcfd3cda2e84a841e204b6eb1362007a) Thanks [@tim-smart](https://github.com/tim-smart)! - ignore errors in scheduled refresh
+
+## 0.3.99
+
+### Patch Changes
+
+- [`f56290a`](https://github.com/tim-smart/lalph/commit/f56290a4c60d7ad6889e4a617709791b67ce0cf6) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+- [`14e4f36`](https://github.com/tim-smart/lalph/commit/14e4f3601cb1d123f88d03ccf2ce7722ee7804a0) Thanks [@tim-smart](https://github.com/tim-smart)! - use clanka for plan mode
+
+## 0.3.98
+
+### Patch Changes
+
+- [`dbe74c6`](https://github.com/tim-smart/lalph/commit/dbe74c68dab2e3cc52a340ec401331f5f11f79c9) Thanks [@tim-smart](https://github.com/tim-smart)! - improve task polling latency
+
+## 0.3.97
+
+### Patch Changes
+
+- [`53fe420`](https://github.com/tim-smart/lalph/commit/53fe42058c6d20d290da6789911b84394ebbf665) Thanks [@tim-smart](https://github.com/tim-smart)! - improve current issue state
+
+## 0.3.96
+
+### Patch Changes
+
+- [`2c4ef5d`](https://github.com/tim-smart/lalph/commit/2c4ef5dfa1e9c5e7aaccb0de40315c24bde0ed24) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.95
+
+### Patch Changes
+
+- [`8fea89e`](https://github.com/tim-smart/lalph/commit/8fea89e2d759743b6116b6cf3e9b4a786e7c3334) Thanks [@tim-smart](https://github.com/tim-smart)! - fix ralphDone flag
+
+## 0.3.94
+
+### Patch Changes
+
+- [`5fa983d`](https://github.com/tim-smart/lalph/commit/5fa983da649e92568f2dff52c6cc8665e9327bb8) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.93
+
+### Patch Changes
+
+- [`ce85c24`](https://github.com/tim-smart/lalph/commit/ce85c24be087000e5127286d81ace770d06444e1) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+- [#398](https://github.com/tim-smart/lalph/pull/398) [`597319f`](https://github.com/tim-smart/lalph/commit/597319f1a3b7cd3780ea1fc32d6c916f23183915) Thanks [@tim-smart](https://github.com/tim-smart)! - Add IssueSource.findById and expose it through a new task tool, `findTaskById`.
+
+## 0.3.92
+
+### Patch Changes
+
+- [`cd8f873`](https://github.com/tim-smart/lalph/commit/cd8f8735ecd1917874e60ff3314d842e67f2c29b) Thanks [@tim-smart](https://github.com/tim-smart)! - prevent memoization of websocket models
+
+## 0.3.91
+
+### Patch Changes
+
+- [`d1287f4`](https://github.com/tim-smart/lalph/commit/d1287f407e7ae664f8d12f0ad7dc02770bab7ad2) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.90
+
+### Patch Changes
+
+- [#392](https://github.com/tim-smart/lalph/pull/392) [`adfdcf0`](https://github.com/tim-smart/lalph/commit/adfdcf0bce2202e413849ce7b057f59440029a86) Thanks [@tim-smart](https://github.com/tim-smart)! - Refactor Ralph branching in `src/commands/root.ts` by extracting named helpers for git-flow layer selection, run-effect selection, iteration waiting, and mode-specific no-work handling. Add an early actionable failure when a Ralph project is missing `ralphSpec` so Ralph worker startup is blocked for misconfigured projects.
+
+- [`c92ef3a`](https://github.com/tim-smart/lalph/commit/c92ef3af67d95fa3d2fd2f795753d5ef96eb6da2) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.89
+
+### Patch Changes
+
+- [`f2a1127`](https://github.com/tim-smart/lalph/commit/f2a11271d1f224e3a2fd4de5d354ca00febbe0f6) Thanks [@tim-smart](https://github.com/tim-smart)! - add max context config for clanka
+
+## 0.3.88
+
+### Patch Changes
+
+- [`664d502`](https://github.com/tim-smart/lalph/commit/664d502ee35d8a878a1af70607c53c8a2df5f856) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.87
+
+### Patch Changes
+
+- [`c8a7804`](https://github.com/tim-smart/lalph/commit/c8a78045c6c892886c0ec09c4fa321c9b19f2cfb) Thanks [@tim-smart](https://github.com/tim-smart)! - settings and prompt cleanup
+
+## 0.3.86
+
+### Patch Changes
+
+- [`24c5529`](https://github.com/tim-smart/lalph/commit/24c5529f7d3f9a2d4b031c5aa2372b4381580947) Thanks [@tim-smart](https://github.com/tim-smart)! - add ralph loop mode
+
+## 0.3.85
+
+### Patch Changes
+
+- [`16eff5b`](https://github.com/tim-smart/lalph/commit/16eff5b70452b4f2709e612d33656b92dd40117e) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.84
+
+### Patch Changes
+
+- [`8f1f5ac`](https://github.com/tim-smart/lalph/commit/8f1f5accdb85ba70a47b68eaf6db06a66aa3501d) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.83
+
+### Patch Changes
+
+- [`aa37d49`](https://github.com/tim-smart/lalph/commit/aa37d49104a70347bf340339d1b93ab28d60bb41) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.82
+
+### Patch Changes
+
+- [`a5ac161`](https://github.com/tim-smart/lalph/commit/a5ac1615add6045d4174fc4b7c040a9ee67a5ac8) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.81
+
+### Patch Changes
+
+- [`b1a9c4a`](https://github.com/tim-smart/lalph/commit/b1a9c4a565a38b360f3b518531ff9f43c9eff2d0) Thanks [@tim-smart](https://github.com/tim-smart)! - align tree-sitter versions
+
+## 0.3.80
+
+### Patch Changes
+
+- [`c585ef2`](https://github.com/tim-smart/lalph/commit/c585ef29e3dac73cd4d9afeccc6cd0cbea34b0ce) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.79
+
+### Patch Changes
+
+- [`94d0d9e`](https://github.com/tim-smart/lalph/commit/94d0d9e52683921a4ee21bd6c958dced9ea26163) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.78
+
+### Patch Changes
+
+- [`7d9c681`](https://github.com/tim-smart/lalph/commit/7d9c68139d0c4fda72bada5bf0e665d1db604859) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+- [`1a4a878`](https://github.com/tim-smart/lalph/commit/1a4a878c1c00ab7146072afa7cfa0bdd7cf420fe) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.77
+
+### Patch Changes
+
+- [`5385a39`](https://github.com/tim-smart/lalph/commit/5385a39e72f500c32f8e567c342701809f80ae9a) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+## 0.3.76
+
+### Patch Changes
+
+- [`758bdd2`](https://github.com/tim-smart/lalph/commit/758bdd2fc60093c2ac6917b843ced7c473bcdd7b) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.75
+
+### Patch Changes
+
+- [`3b9d4cf`](https://github.com/tim-smart/lalph/commit/3b9d4cfdf9c9e3d9b41c03b0e53c2f17591be163) Thanks [@tim-smart](https://github.com/tim-smart)! - build SemanticSearch earlier
+
+- [`e1e923a`](https://github.com/tim-smart/lalph/commit/e1e923a3f1bf3eb85ff9da99a41a286ff6aa81cf) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+## 0.3.74
+
+### Patch Changes
+
+- [`7d9db91`](https://github.com/tim-smart/lalph/commit/7d9db916826865629a94e05c96ad2e85f809d17b) Thanks [@tim-smart](https://github.com/tim-smart)! - update openai provider
+
+## 0.3.73
+
+### Patch Changes
+
+- [#376](https://github.com/tim-smart/lalph/pull/376) [`5818830`](https://github.com/tim-smart/lalph/commit/58188307e09d7e47e1abc2482bea18b75e885145) Thanks [@tim-smart](https://github.com/tim-smart)! - Copy .lalph/shared into new temporary worktrees instead of symlinking it, and sync the worktree copy back to the main .lalph/shared directory when the worktree is finalized.
+
+## 0.3.72
+
+### Patch Changes
+
+- [`2dad80f`](https://github.com/tim-smart/lalph/commit/2dad80f8d3bda9a35e2bf77988ce5ad466beb76e) Thanks [@tim-smart](https://github.com/tim-smart)! - only watch for prd changes
+
+## 0.3.71
+
+### Patch Changes
+
+- [#373](https://github.com/tim-smart/lalph/pull/373) [`a552a73`](https://github.com/tim-smart/lalph/commit/a552a73ce7e1cafd517ae334f7429772c5555170) Thanks [@tim-smart](https://github.com/tim-smart)! - move tasks to in-progress while the review agent is running, then return them to in-review once review finishes
+
+- [`586b9c8`](https://github.com/tim-smart/lalph/commit/586b9c869b9ea273fae8c102b8fc0007492b9c74) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+- [#374](https://github.com/tim-smart/lalph/pull/374) [`466b756`](https://github.com/tim-smart/lalph/commit/466b756aabe1c2197a127acab097c9afb478438e) Thanks [@tim-smart](https://github.com/tim-smart)! - add support for clanka semantic search tool
+
+- [`586b9c8`](https://github.com/tim-smart/lalph/commit/586b9c869b9ea273fae8c102b8fc0007492b9c74) Thanks [@tim-smart](https://github.com/tim-smart)! - add shared directory
+
+## 0.3.70
+
+### Patch Changes
+
+- [`61bbeb2`](https://github.com/tim-smart/lalph/commit/61bbeb24b528aa894f835dba068bdb977e7d7f25) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.69
+
+### Patch Changes
+
+- [`9c535dc`](https://github.com/tim-smart/lalph/commit/9c535dcfbd722147c94cbeb3f8a6777271870905) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+## 0.3.68
+
+### Patch Changes
+
+- [`89ddd35`](https://github.com/tim-smart/lalph/commit/89ddd35c70e1eb76c45e369f783afe38dc47cf80) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+## 0.3.67
+
+### Patch Changes
+
+- [`9233553`](https://github.com/tim-smart/lalph/commit/923355370609f5feb2908318b4dd6c174625ffa9) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
 ## 0.3.66
 
 ### Patch Changes
 
-- merge the latest upstream lalph changes into the effect-anything fork, including research-agent support and websocket clanka updates, while preserving the fork's JJ linear-history and review-completion workflow.
+- [`9cc169e`](https://github.com/tim-smart/lalph/commit/9cc169e29dd39d40410a35e2f8580990998fecfa) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
 
 ## 0.3.65
 

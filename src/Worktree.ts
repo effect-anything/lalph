@@ -171,6 +171,21 @@ function buildWorktree(options?: {
       sourceDirectory: lalphDirectory,
       targetDirectory: directory,
     })
+    const shared = pathService.join(lalphDirectory, ".lalph", "shared")
+    const worktreeShared = pathService.join(directory, ".lalph", "shared")
+    yield* syncSharedIntoWorktree({
+      shared,
+      worktreeShared,
+    })
+
+    yield* Effect.addFinalizer(
+      Effect.fnUntraced(function* () {
+        yield* copySharedBack({
+          shared,
+          worktreeShared,
+        }).pipe(Effect.catchCause(Effect.logWarning))
+      }),
+    )
 
     const execHelpers = yield* makeExecHelpers({
       directory,
@@ -258,7 +273,6 @@ export const setupWorktree = Effect.fnUntraced(function* (options: {
       yield* options.exec`jj new ${targetBranchToJjRevision(parsed)}`
     }
   }
-
   const usedHooksConfig = yield* hooks.executeHook({
     directory: options.directory,
     fallbackDirectory: options.repository.root,
@@ -285,6 +299,36 @@ export const setupWorktree = Effect.fnUntraced(function* (options: {
     : cwdSetupPath
 
   yield* options.exec`${setupPath}`
+})
+
+const syncSharedIntoWorktree = Effect.fnUntraced(function* (options: {
+  readonly shared: string
+  readonly worktreeShared: string
+}) {
+  const fs = yield* FileSystem.FileSystem
+
+  yield* fs.makeDirectory(options.shared, { recursive: true })
+  yield* fs.copy(options.shared, options.worktreeShared, {
+    overwrite: true,
+  })
+})
+
+const copySharedBack = Effect.fnUntraced(function* (options: {
+  readonly shared: string
+  readonly worktreeShared: string
+}) {
+  const fs = yield* FileSystem.FileSystem
+  const pathService = yield* Path.Path
+
+  if (!(yield* fs.exists(options.worktreeShared))) {
+    return
+  }
+
+  yield* fs.makeDirectory(pathService.dirname(options.shared), {
+    recursive: true,
+  })
+  yield* fs.remove(options.shared, { recursive: true, force: true })
+  yield* fs.copy(options.worktreeShared, options.shared)
 })
 
 const getTargetBranch = Effect.gen(function* () {
