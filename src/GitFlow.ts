@@ -103,7 +103,7 @@ After making any changes, commit and push them to the same pull request.
       prState = yield* worktree.viewPrState(prState.value.number)
       yield* Effect.log("PR state after merge", prState)
       if (Option.isSome(prState) && prState.value.state === "MERGED") {
-        const issue = yield* prd.findById(options.issueId)
+        const issue = yield* source.findById(projectId, options.issueId)
         if (issue && issue.state !== "done") {
           yield* source.updateIssue({
             projectId,
@@ -182,13 +182,12 @@ But you **do not** need to git push your changes or switch branches.
         }
       }),
       autoMerge: Effect.fnUntraced(function* (options) {
-        const prd = yield* Prd
+        const source = yield* IssueSource
         const projectId = yield* CurrentProjectId
-        const issue = yield* prd.findById(options.issueId)
+        const issue = yield* source.findById(projectId, options.issueId)
         if (!issue || issue.state !== "in-review") {
           return
         }
-        const source = yield* IssueSource
         yield* source.updateIssue({
           projectId,
           issueId: options.issueId,

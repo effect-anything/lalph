@@ -200,7 +200,7 @@ const run = Effect.fnUntraced(
         effect,
         (u): u is RunnerStalled => u instanceof RunnerStalled,
         Effect.fnUntraced(function* (e) {
-          const task = yield* prd.findById(taskId!)
+          const task = yield* source.findById(projectId, taskId!)
           const inReview = task?.state === "in-review"
           if (inReview) return
           return yield* e
@@ -315,7 +315,7 @@ const run = Effect.fnUntraced(
       issueId: taskId,
     })
 
-    const task = yield* prd.findById(taskId)
+    const task = yield* source.findById(projectId, taskId)
     if (task?.autoMerge) {
       yield* gitFlow.autoMerge({
         targetBranch: Option.getOrUndefined(options.targetBranch),

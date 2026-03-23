@@ -32,12 +32,6 @@ export class Prd extends ServiceMap.Service<
     readonly flagUnmergable: (options: {
       readonly issueId: string
     }) => Effect.Effect<void, IssueSourceError>
-    readonly findById: (
-      issueId: string,
-    ) => Effect.Effect<
-      PrdIssue | null,
-      PlatformError.PlatformError | IssueSourceError
-    >
     readonly setChosenIssueId: (issueId: string | null) => Effect.Effect<void>
     readonly setAutoMerge: (enabled: boolean) => Effect.Effect<void>
   }
@@ -68,8 +62,7 @@ export class Prd extends ServiceMap.Service<
     const maybeRevertIssue = Effect.fnUntraced(function* (options: {
       readonly issueId: string
     }) {
-      const updated = yield* readPrd
-      const issue = updated.find((i) => i.id === options.issueId)
+      const issue = yield* source.findById(projectId, options.issueId)
       if (!issue || issue.state === "in-review") return
       yield* source.updateIssue({
         projectId,
@@ -244,11 +237,6 @@ export class Prd extends ServiceMap.Service<
       Effect.forkScoped,
     )
 
-    const findById = Effect.fnUntraced(function* (issueId: string) {
-      const current = yield* getCurrentIssues
-      return current.find((i) => i.id === issueId) ?? null
-    })
-
     return {
       path: prdFile,
       maybeRevertIssue,
@@ -265,7 +253,6 @@ export class Prd extends ServiceMap.Service<
         }),
       ),
       flagUnmergable,
-      findById,
       setChosenIssueId,
       setAutoMerge,
     }
@@ -287,7 +274,6 @@ export class Prd extends ServiceMap.Service<
     maybeRevertIssue: () => Effect.void,
     revertUpdatedIssues: Effect.void,
     flagUnmergable: () => Effect.void,
-    findById: () => Effect.succeed(null),
     setChosenIssueId: () => Effect.void,
     setAutoMerge: () => Effect.void,
   })
