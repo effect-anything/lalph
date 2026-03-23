@@ -3,6 +3,7 @@ import {
   Data,
   Duration,
   Effect,
+  FiberHandle,
   Option,
   Schema,
   ScopedCache,
@@ -94,6 +95,8 @@ export class IssueSource extends ServiceMap.Service<
 >()("lalph/IssueSource") {
   static make(impl: Omit<IssueSource["Service"], "ref" | "findById">) {
     return Effect.gen(function* () {
+      const handle = yield* FiberHandle.make()
+
       const refs = yield* ScopedCache.make({
         lookup: Effect.fnUntraced(function* (projectId: ProjectId) {
           const ref = yield* SubscriptionRef.make<IssuesChange>(
@@ -125,6 +128,13 @@ export class IssueSource extends ServiceMap.Service<
         capacity: Number.MAX_SAFE_INTEGER,
       })
 
+      const updateIssues = Effect.fnUntraced(function* (projectId: ProjectId) {
+        const issues = yield* impl.issues(projectId)
+        const ref = yield* ScopedCache.get(refs, projectId)
+        yield* SubscriptionRef.set(ref, IssuesChange.Internal({ issues }))
+        return issues
+      })
+
       const update = Effect.fnUntraced(function* (
         projectId: ProjectId,
         f: (_: ReadonlyArray<PrdIssue>) => ReadonlyArray<PrdIssue>,
@@ -135,13 +145,11 @@ export class IssueSource extends ServiceMap.Service<
             issues: f(change.issues),
           }),
         )
-      })
-
-      const updateIssues = (projectId: ProjectId) =>
-        pipe(
-          impl.issues(projectId),
-          Effect.tap((issues) => update(projectId, () => issues)),
+        yield* FiberHandle.run(
+          handle,
+          Effect.delay(updateIssues(projectId), "5 seconds"),
         )
+      })
 
       return IssueSource.of({
         ...impl,
