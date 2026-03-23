@@ -857,7 +857,6 @@ const taskUpdateSteer = Effect.fnUntraced(function* (options: {
         return Result.failVoid
       }
       current = issue
-      console.log("issue change", issues._tag)
       if (issues._tag === "Internal") {
         return Result.failVoid
       }
