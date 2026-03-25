@@ -169,7 +169,7 @@ const run = Effect.fnUntraced(
     yield* source.ensureInProgress(projectId, taskId).pipe(
       Effect.timeoutOrElse({
         duration: "1 minute",
-        onTimeout: () => Effect.fail(new RunnerStalled()),
+        orElse: () => Effect.fail(new RunnerStalled()),
       }),
     )
 

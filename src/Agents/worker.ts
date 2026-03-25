@@ -48,7 +48,6 @@ ${research}`,
             },
           ]),
       }),
-      stallTimeout: options.stallTimeout,
       maxContext: options.maxContext,
       steer: options.steer,
       mode: CurrentTask.$match(options.currentTask, {

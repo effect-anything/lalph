@@ -22,7 +22,6 @@ export const agentChooserRalph = Effect.fnUntraced(function* (options: {
       directory: worktree.directory,
       model: options.preset.extraArgs.join(" "),
       prompt: promptGen.promptChooseRalph({ specFile: options.specFile }),
-      stallTimeout: options.stallTimeout,
       mode: "ralph",
     })
   } else {
@@ -39,7 +38,7 @@ export const agentChooserRalph = Effect.fnUntraced(function* (options: {
       }),
       Effect.timeoutOrElse({
         duration: options.stallTimeout,
-        onTimeout: () => Effect.fail(new RunnerStalled()),
+        orElse: () => Effect.fail(new RunnerStalled()),
       }),
     )
   }

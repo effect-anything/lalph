@@ -40,7 +40,6 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
       directory: worktree.directory,
       model: options.preset.extraArgs.join(" "),
       prompt: promptGen.promptChooseClanka({ gitFlow }),
-      stallTimeout: options.stallTimeout,
       mode: "choose",
     }).pipe(
       Effect.provideService(ChosenTaskDeferred, deferred),
@@ -74,7 +73,7 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
     }),
     Effect.timeoutOrElse({
       duration: options.stallTimeout,
-      onTimeout: () => Effect.fail(new RunnerStalled()),
+      orElse: () => Effect.fail(new RunnerStalled()),
     }),
     Effect.raceFirst(taskJsonCreated),
   )
