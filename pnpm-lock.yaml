@@ -40,8 +40,8 @@ importers:
         specifier: 4.0.0-beta.40
         version: 4.0.0-beta.40(effect@4.0.0-beta.40)(ioredis@5.10.0)
       '@linear/sdk':
-        specifier: ^79.0.0
-        version: 79.0.0(graphql@16.13.1)
+        specifier: ^80.0.0
+        version: 80.0.0(graphql@16.13.1)
       '@octokit/plugin-rest-endpoint-methods':
         specifier: ^17.0.0
         version: 17.0.0(@octokit/core@7.0.6)
@@ -52,8 +52,8 @@ importers:
         specifier: 7.0.0-dev.20260324.1
         version: 7.0.0-dev.20260324.1
       clanka:
-        specifier: ^0.2.37
-        version: 0.2.37(@effect/ai-openai-compat@4.0.0-beta.40(effect@4.0.0-beta.40))(@effect/ai-openai@4.0.0-beta.40(effect@4.0.0-beta.40))(effect@4.0.0-beta.40)(ioredis@5.10.0)(zod@4.3.6)
+        specifier: ^0.2.38
+        version: 0.2.38(@effect/ai-openai-compat@4.0.0-beta.40(effect@4.0.0-beta.40))(@effect/ai-openai@4.0.0-beta.40(effect@4.0.0-beta.40))(effect@4.0.0-beta.40)(ioredis@5.10.0)(zod@4.3.6)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -272,8 +272,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@linear/sdk@79.0.0':
-    resolution: {integrity: sha512-5GwFWpgMOnpOoW2XgnImTRLsK8cTxQ0+CtNIm5NnZHFVkC3Ij0q/TcRazsKAJyBbcS2jhwIH/q+z8+Ird+kCxg==}
+  '@linear/sdk@80.0.0':
+    resolution: {integrity: sha512-2OCUJBGTws88zcF3jU5ezqu9wH2zuOtWtBN9GCTwfxt6+koL8iNNb2yyHegJQJUe339OHdiF8OMzZaly4a+3Ng==}
     engines: {node: '>=18.x'}
 
   '@manypkg/find-root@1.1.0':
@@ -906,8 +906,8 @@ packages:
   chownr@1.1.4:
     resolution: {integrity: sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==}
 
-  clanka@0.2.37:
-    resolution: {integrity: sha512-JjOg/QOQu70YeN9VyIUBt52lV5Isu5CiWRPaUHuSZC5ckfwwBPqkpvqLBtCRTr/pWHu5EqvzjPTPl4oit16L4w==}
+  clanka@0.2.38:
+    resolution: {integrity: sha512-6PLw39ZIGnd0gs5v0Du9C9mAYEmzkz7Z6gvTLi9wykn6VDxQVwbHhOqi9gvEKcoGAmmRaVUB/GtyU36wQn6Giw==}
     hasBin: true
     peerDependencies:
       '@effect/ai-openai': 4.0.0-beta.40
@@ -2359,7 +2359,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@linear/sdk@79.0.0(graphql@16.13.1)':
+  '@linear/sdk@80.0.0(graphql@16.13.1)':
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.1)
     transitivePeerDependencies:
@@ -2918,7 +2918,7 @@ snapshots:
 
   chownr@1.1.4: {}
 
-  clanka@0.2.37(@effect/ai-openai-compat@4.0.0-beta.40(effect@4.0.0-beta.40))(@effect/ai-openai@4.0.0-beta.40(effect@4.0.0-beta.40))(effect@4.0.0-beta.40)(ioredis@5.10.0)(zod@4.3.6):
+  clanka@0.2.38(@effect/ai-openai-compat@4.0.0-beta.40(effect@4.0.0-beta.40))(@effect/ai-openai@4.0.0-beta.40(effect@4.0.0-beta.40))(effect@4.0.0-beta.40)(ioredis@5.10.0)(zod@4.3.6):
     dependencies:
       '@effect/ai-openai': 4.0.0-beta.40(effect@4.0.0-beta.40)
       '@effect/ai-openai-compat': 4.0.0-beta.40(effect@4.0.0-beta.40)
