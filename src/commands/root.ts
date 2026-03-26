@@ -221,7 +221,6 @@ const run = Effect.fnUntraced(
         researchResult = yield* agentResearcher({
           task: chosenTask.prd,
           specsDirectory: options.specsDirectory,
-          stallTimeout: options.stallTimeout,
           preset: taskPreset,
         })
       }

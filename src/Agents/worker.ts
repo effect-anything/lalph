@@ -50,7 +50,6 @@ ${research}`,
       }),
       maxContext: options.maxContext,
       steer: options.steer,
-      stallTimeout: options.stallTimeout,
       mode: CurrentTask.$match(options.currentTask, {
         task: () => "default" as const,
         ralph: () => "ralph" as const,
