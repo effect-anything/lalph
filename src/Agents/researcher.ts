@@ -1,4 +1,4 @@
-import { Duration, Effect, Option } from "effect"
+import { Effect, Option } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Worktree } from "../Worktree.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
@@ -8,7 +8,6 @@ import type { PrdIssue } from "../domain/PrdIssue.ts"
 export const agentResearcher = Effect.fnUntraced(function* (options: {
   readonly task: PrdIssue
   readonly specsDirectory: string
-  readonly stallTimeout: Duration.Duration
   readonly preset: CliAgentPreset
 }) {
   const worktree = yield* Worktree
@@ -26,6 +25,5 @@ export const agentResearcher = Effect.fnUntraced(function* (options: {
     prompt: promptGen.promptResearch({
       task: options.task,
     }),
-    stallTimeout: options.stallTimeout,
   }).pipe(Effect.asSome)
 })

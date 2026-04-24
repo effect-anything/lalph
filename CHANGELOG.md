@@ -1,5 +1,127 @@
 # lalph
 
+## 0.3.123
+
+### Patch Changes
+
+- [`3ae8db3`](https://github.com/tim-smart/lalph/commit/3ae8db3844fdf42ca13fac599bc4fc55002cafcb) Thanks [@tim-smart](https://github.com/tim-smart)! - Update dependencies.
+
+- [#448](https://github.com/tim-smart/lalph/pull/448) [`bddea0f`](https://github.com/tim-smart/lalph/commit/bddea0f3ed3f214d1658ae90ae42e6d6118bf5b6) Thanks [@alvarosevilla95](https://github.com/alvarosevilla95)! - Store Ralph spec file selections relative to the current project root.
+
+- [#449](https://github.com/tim-smart/lalph/pull/449) [`07a0594`](https://github.com/tim-smart/lalph/commit/07a0594f342aa2af8d4b0327f33a41a68dafa8c6) Thanks [@alvarosevilla95](https://github.com/alvarosevilla95)! - fix: use colored output in codex
+
+## 0.3.122
+
+### Patch Changes
+
+- [`a6af188`](https://github.com/tim-smart/lalph/commit/a6af1881f88c0a69259ab8b2ece43a8320a2fcd6) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.121
+
+### Patch Changes
+
+- [`52d3bde`](https://github.com/tim-smart/lalph/commit/52d3bde6a23e21fad0e76245b2f5ae3624eee572) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+## 0.3.120
+
+### Patch Changes
+
+- [`642dd53`](https://github.com/tim-smart/lalph/commit/642dd53c2335e195b8cdf05eccfd21c5deb94f3c) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+## 0.3.119
+
+### Patch Changes
+
+- [`719ce4f`](https://github.com/tim-smart/lalph/commit/719ce4fad9fe4948c34a5f06f8b54a3859baef4f) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+## 0.3.118
+
+### Patch Changes
+
+- [`3638e92`](https://github.com/tim-smart/lalph/commit/3638e92bd821155d12fd40bc03974b885db0b861) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.117
+
+### Patch Changes
+
+- [`4f2848d`](https://github.com/tim-smart/lalph/commit/4f2848d97c40797abd1aa3fa3d47ebe8d41c9707) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.116
+
+### Patch Changes
+
+- [`0770bfd`](https://github.com/tim-smart/lalph/commit/0770bfdde1fa5724e63004ca1c1db110737a6edc) Thanks [@tim-smart](https://github.com/tim-smart)! - use clanka TurnTimeout
+
+## 0.3.115
+
+### Patch Changes
+
+- [`b299c57`](https://github.com/tim-smart/lalph/commit/b299c575f4f52de09fe6bdc1b28e5aa32f15f35f) Thanks [@tim-smart](https://github.com/tim-smart)! - add back stall timeout for clanka
+
+## 0.3.114
+
+### Patch Changes
+
+- [`af754ff`](https://github.com/tim-smart/lalph/commit/af754ff072f32fd7ab11811787a252caf769d40f) Thanks [@tim-smart](https://github.com/tim-smart)! - retry issue refresh
+
+## 0.3.113
+
+### Patch Changes
+
+- [`ee4e165`](https://github.com/tim-smart/lalph/commit/ee4e1654a72a7c8fd085fd99d0967bac9486c9a9) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.112
+
+### Patch Changes
+
+- [`7510079`](https://github.com/tim-smart/lalph/commit/7510079a6ddc4177df3d7bfd8d8b259f1af2de8c) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.111
+
+### Patch Changes
+
+- [`77361b8`](https://github.com/tim-smart/lalph/commit/77361b821dd5a04ffe63b713094550314c81778f) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+## 0.3.110
+
+### Patch Changes
+
+- [`4045dbf`](https://github.com/tim-smart/lalph/commit/4045dbfcbc49f313217f5b44bb175201d6cae00c) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+## 0.3.109
+
+### Patch Changes
+
+- [`3d6c5b4`](https://github.com/tim-smart/lalph/commit/3d6c5b441db8e7e5167fc64135701062a0f85060) Thanks [@tim-smart](https://github.com/tim-smart)! - remove findById from Prd service
+
+## 0.3.108
+
+### Patch Changes
+
+- [`acf4c9d`](https://github.com/tim-smart/lalph/commit/acf4c9de5a99038b482a811d59d51885ba8701be) Thanks [@tim-smart](https://github.com/tim-smart)! - fix updates cause clanka steer messages
+
+## 0.3.107
+
+### Patch Changes
+
+- [`aeaff3a`](https://github.com/tim-smart/lalph/commit/aeaff3a6dc7478d866cefd78f0b7f6ead87daf6f) Thanks [@tim-smart](https://github.com/tim-smart)! - custom review instructions override prompt completely
+
+## 0.3.106
+
+### Patch Changes
+
+- [#425](https://github.com/tim-smart/lalph/pull/425) [`77e3392`](https://github.com/tim-smart/lalph/commit/77e3392ee920d27ac3d21bbfc26a1ada00249acd) Thanks [@tim-smart](https://github.com/tim-smart)! - Update `IssueSource.make` to mutate cached issue state via `SubscriptionRef.update` after create / update / cancel operations instead of immediately re-fetching issues from the backing API.
+
+## 0.3.105
+
+### Patch Changes
+
+- [#421](https://github.com/tim-smart/lalph/pull/421) [`b764397`](https://github.com/tim-smart/lalph/commit/b764397d82666add07163be66f1aac0896b6eedc) Thanks [@alvarosevilla95](https://github.com/alvarosevilla95)! - Support personal access token for GitHub authentication.
+
+- [#422](https://github.com/tim-smart/lalph/pull/422) [`7d7c295`](https://github.com/tim-smart/lalph/commit/7d7c295fc59c02c6ee912dd1cbec4adebf0dbf17) Thanks [@alvarosevilla95](https://github.com/alvarosevilla95)! - Accept GitHub pull request review decision enum values when decoding PR data.
+
+- [#424](https://github.com/tim-smart/lalph/pull/424) [`d163f47`](https://github.com/tim-smart/lalph/commit/d163f47340d28c7feec4b431b07b56029f817a33) Thanks [@tim-smart](https://github.com/tim-smart)! - Only update .lalph/prd.yml from issue-source changes marked as external, preventing internal refreshes from overwriting local edits.
+
 ## 0.3.104
 
 ### Patch Changes

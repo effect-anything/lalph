@@ -42,20 +42,12 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
       directory: worktree.directory,
       model: options.preset.extraArgs.join(" "),
       system,
-      prompt: Option.match(customInstructions, {
-        onNone: () =>
-          promptGen.promptReview({
-            prompt: options.instructions,
-            gitFlow,
-          }),
-        onSome: (prompt) =>
-          promptGen.promptReviewCustom({
-            prompt,
-            specsDirectory: options.specsDirectory,
-            removePrdNotes: true,
-          }),
-      }),
-      stallTimeout: options.stallTimeout,
+      prompt: Option.getOrElse(customInstructions, () =>
+        promptGen.promptReview({
+          prompt: options.instructions,
+          gitFlow,
+        }),
+      ),
       mode,
     })
     return ExitCode(0)
@@ -63,19 +55,12 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
 
   const cliCommand = pipe(
     options.preset.cliAgent.command({
-      prompt: Option.match(customInstructions, {
-        onNone: () =>
-          promptGen.promptReview({
-            prompt: options.instructions,
-            gitFlow,
-          }),
-        onSome: (prompt) =>
-          promptGen.promptReviewCustom({
-            prompt,
-            specsDirectory: options.specsDirectory,
-            removePrdNotes: false,
-          }),
-      }),
+      prompt: Option.getOrElse(customInstructions, () =>
+        promptGen.promptReview({
+          prompt: options.instructions,
+          gitFlow,
+        }),
+      ),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
       extraArgs: options.preset.extraArgs,
     }),

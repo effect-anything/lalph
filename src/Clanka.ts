@@ -3,7 +3,6 @@ import * as OutputFormatter from "clanka/OutputFormatter"
 import {
   Cause,
   Config,
-  Duration,
   Effect,
   identity,
   Layer,
@@ -15,7 +14,6 @@ import {
 import { Prompt as CliPrompt } from "effect/unstable/cli"
 import { TaskChooseTools, TaskTools, TaskToolsHandlers } from "./TaskTools.ts"
 import { layerClankaModel, ModelServices } from "./ClankaModels.ts"
-import { withStallTimeout } from "./shared/stream.ts"
 import { NodeHttpClient } from "@effect/platform-node"
 import type { Prompt } from "effect/unstable/ai"
 import { OpenAiClient, OpenAiEmbeddingModel } from "@effect/ai-openai"
@@ -74,7 +72,6 @@ export const runClanka = Effect.fnUntraced(
     readonly model: string
     readonly prompt: Prompt.RawInput
     readonly system?: string | undefined
-    readonly stallTimeout?: Duration.Input | undefined
     readonly maxContext?: number | undefined
     readonly steer?: Stream.Stream<string> | undefined
     readonly mode?: "ralph" | "choose" | "default" | undefined
@@ -89,10 +86,6 @@ export const runClanka = Effect.fnUntraced(
 
     yield* muxer.add(output)
 
-    let stream = options.stallTimeout
-      ? withStallTimeout(options.stallTimeout)(output)
-      : output
-
     if (options.steer) {
       yield* options.steer.pipe(
         Stream.switchMap(
@@ -106,7 +99,7 @@ export const runClanka = Effect.fnUntraced(
       )
     }
 
-    return yield* stream.pipe(
+    return yield* output.pipe(
       options.maxContext
         ? Stream.tap((part) => {
             if (part._tag !== "Usage") return Effect.void

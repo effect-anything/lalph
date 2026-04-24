@@ -47,7 +47,6 @@ export const agentTimeout = Effect.fnUntraced(function* (options: {
       model: options.preset.extraArgs.join(" "),
       system: timeoutMode.system,
       prompt: timeoutMode.clankaPrompt,
-      stallTimeout: options.stallTimeout,
       mode: timeoutMode.mode,
     })
     return ExitCode(0)

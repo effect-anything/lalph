@@ -391,13 +391,12 @@ But you **do not** need to push your changes or switch workspaces, and you shoul
         }
       }),
       autoMerge: Effect.fnUntraced(function* (options) {
-        const prd = yield* Prd
+        const source = yield* IssueSource
         const projectId = yield* CurrentProjectId
-        const issue = yield* prd.findById(options.issueId)
+        const issue = yield* source.findById(projectId, options.issueId)
         if (!issue || issue.state !== "in-review") {
           return
         }
-        const source = yield* IssueSource
         yield* source.updateIssue({
           projectId,
           issueId: options.issueId,

@@ -163,6 +163,7 @@ const codex = new CliAgent({
         "exec",
         "--dangerously-bypass-approvals-and-sandbox",
         ...extraArgs,
+        "--",
         prdFilePath
           ? `@${prdFilePath}
 
@@ -173,6 +174,8 @@ ${prompt}`
         stdout: "pipe",
         stderr: "pipe",
         stdin: "inherit",
+        env: { FORCE_COLOR: "1" },
+        extendEnv: true,
       },
     ),
   commandPlan: ({ prompt, prdFilePath, dangerous }) =>
@@ -180,6 +183,7 @@ ${prompt}`
       "codex",
       [
         ...(dangerous ? ["--dangerously-bypass-approvals-and-sandbox"] : []),
+        "--",
         prdFilePath
           ? `@${prdFilePath}
 

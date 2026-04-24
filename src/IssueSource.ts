@@ -3,7 +3,9 @@ import {
   Data,
   Duration,
   Effect,
+  FiberHandle,
   Option,
+  Schedule,
   Schema,
   ScopedCache,
   ServiceMap,
@@ -11,7 +13,7 @@ import {
   SubscriptionRef,
   pipe,
 } from "effect"
-import type { PrdIssue } from "./domain/PrdIssue.ts"
+import { PrdIssue } from "./domain/PrdIssue.ts"
 import type { ProjectId } from "./domain/Project.ts"
 import type { CurrentProjectId, Settings } from "./Settings.ts"
 import type { CliAgentPreset } from "./domain/CliAgentPreset.ts"
@@ -94,6 +96,8 @@ export class IssueSource extends ServiceMap.Service<
 >()("lalph/IssueSource") {
   static make(impl: Omit<IssueSource["Service"], "ref" | "findById">) {
     return Effect.gen(function* () {
+      const handle = yield* FiberHandle.make()
+
       const refs = yield* ScopedCache.make({
         lookup: Effect.fnUntraced(function* (projectId: ProjectId) {
           const ref = yield* SubscriptionRef.make<IssuesChange>(
@@ -111,8 +115,9 @@ export class IssueSource extends ServiceMap.Service<
                 Effect.tap((issues) =>
                   SubscriptionRef.set(ref, IssuesChange.External({ issues })),
                 ),
-                Effect.ignoreCause,
                 Effect.delay(Duration.seconds(30)),
+                Effect.sandbox,
+                Effect.retry(Schedule.forever),
                 Stream.fromEffectDrain,
               ),
             ),
@@ -125,19 +130,28 @@ export class IssueSource extends ServiceMap.Service<
         capacity: Number.MAX_SAFE_INTEGER,
       })
 
-      const update = Effect.fnUntraced(function* (
-        projectId: ProjectId,
-        issues: ReadonlyArray<PrdIssue>,
-      ) {
+      const updateIssues = Effect.fnUntraced(function* (projectId: ProjectId) {
+        const issues = yield* impl.issues(projectId)
         const ref = yield* ScopedCache.get(refs, projectId)
         yield* SubscriptionRef.set(ref, IssuesChange.Internal({ issues }))
+        return issues
       })
 
-      const updateIssues = (projectId: ProjectId) =>
-        pipe(
-          impl.issues(projectId),
-          Effect.tap((issues) => update(projectId, issues)),
+      const update = Effect.fnUntraced(function* (
+        projectId: ProjectId,
+        f: (_: ReadonlyArray<PrdIssue>) => ReadonlyArray<PrdIssue>,
+      ) {
+        const ref = yield* ScopedCache.get(refs, projectId)
+        yield* SubscriptionRef.update(ref, (change) =>
+          IssuesChange.Internal({
+            issues: f(change.issues),
+          }),
         )
+        yield* FiberHandle.run(
+          handle,
+          Effect.delay(updateIssues(projectId), "5 seconds"),
+        )
+      })
 
       return IssueSource.of({
         ...impl,
@@ -151,17 +165,49 @@ export class IssueSource extends ServiceMap.Service<
         createIssue: (projectId, issue) =>
           pipe(
             impl.createIssue(projectId, issue),
-            Effect.tap(updateIssues(projectId)),
+            Effect.tap((createdIssue) =>
+              update(projectId, (issues) => {
+                const nextIssue = issue.update({ id: createdIssue.id })
+                const index = issues.findIndex(
+                  (current) => current.id === createdIssue.id,
+                )
+                if (index === -1) {
+                  return [...issues, nextIssue]
+                }
+                return issues.map((current, i) =>
+                  i === index ? nextIssue : current,
+                )
+              }),
+            ),
           ),
         updateIssue: (options) =>
           pipe(
             impl.updateIssue(options),
-            Effect.tap(updateIssues(options.projectId)),
+            Effect.tap(() =>
+              update(options.projectId, (issues) =>
+                issues.map((issue) =>
+                  issue.id === options.issueId
+                    ? new PrdIssue({
+                        ...issue,
+                        title: options.title ?? issue.title,
+                        description: options.description ?? issue.description,
+                        state: options.state ?? issue.state,
+                        blockedBy: options.blockedBy ?? issue.blockedBy,
+                        autoMerge: options.autoMerge ?? issue.autoMerge,
+                      })
+                    : issue,
+                ),
+              ),
+            ),
           ),
         cancelIssue: (projectId, issueId) =>
           pipe(
             impl.cancelIssue(projectId, issueId),
-            Effect.tap(updateIssues(projectId)),
+            Effect.tap(() =>
+              update(projectId, (issues) =>
+                issues.filter((issue) => issue.id !== issueId),
+              ),
+            ),
           ),
       })
     })
