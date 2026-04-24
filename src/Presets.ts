@@ -1,4 +1,4 @@
-import { Array, Effect, Option, Schema } from "effect"
+import { Array, Effect, Layer, Option, Schema } from "effect"
 import { Setting, Settings } from "./Settings.ts"
 import { CliAgentPreset, CliAgentPresetId } from "./domain/CliAgentPreset.ts"
 import { Prompt } from "effect/unstable/cli"
@@ -131,13 +131,12 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
 
   if (cliAgent.id === "clanka") {
     yield* Effect.log("Verifying Clanka model configuration...")
-    // @effect-diagnostics-next-line multipleEffectProvide:off
     yield* LanguageModel.generateText({ prompt: "say hello" }).pipe(
       Effect.ignore,
-      Effect.provide(layerClankaModel(preset.extraArgs.join(" ")), {
-        local: true,
-      }),
-      Effect.provide(ModelServices),
+      Effect.provide(
+        Layer.merge(layerClankaModel(preset.extraArgs.join(" ")), ModelServices),
+        { local: true },
+      ),
     )
   }
 

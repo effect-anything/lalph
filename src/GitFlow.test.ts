@@ -197,6 +197,7 @@ test("GitFlowPR.autoMerge runs pre-merge hooks before gh pr merge", async (t) =>
         root: directory,
       },
       targetBranch: undefined,
+    // @effect-diagnostics-next-line multipleEffectProvide:off
     }).pipe(Effect.provide(Hooks.layer), Effect.provide(PlatformServices)),
   )
 
@@ -301,6 +302,7 @@ test("GitFlowPR.autoMerge runs jj pre-merge hooks from the main workspace config
         root: repositoryDirectory,
       },
       targetBranch: undefined,
+    // @effect-diagnostics-next-line multipleEffectProvide:off
     }).pipe(Effect.provide(Hooks.layer), Effect.provide(PlatformServices)),
   )
 
@@ -402,6 +404,7 @@ exit 1
         root: directory,
       },
       targetBranch: undefined,
+    // @effect-diagnostics-next-line multipleEffectProvide:off
     }).pipe(Effect.provide(Hooks.layer), Effect.provide(PlatformServices)),
   )
 

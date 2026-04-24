@@ -209,6 +209,7 @@ test("makeExecHelpers.execString injects hook environment variables", async (t) 
           )
         `}`,
       ),
+      // @effect-diagnostics-next-line multipleEffectProvide:off
       Effect.provide(Hooks.layer),
       Effect.provide(PlatformServices),
     ),
@@ -271,6 +272,7 @@ test("makeExecHelpers.exec injects hook variables when optional values are unset
           }
         `}`,
       ),
+      // @effect-diagnostics-next-line multipleEffectProvide:off
       Effect.provide(Hooks.layer),
       Effect.provide(PlatformServices),
     ),
@@ -763,6 +765,7 @@ git checkout pr-17 >/dev/null
       targetBranch: undefined,
     }).pipe(
       Effect.flatMap(({ checkoutPr }) => checkoutPr(17)),
+      // @effect-diagnostics-next-line multipleEffectProvide:off
       Effect.provide(Hooks.layer),
       Effect.provide(PlatformServices),
     ),
@@ -830,6 +833,7 @@ test("runPostSwitchHooks executes hooks for an existing git worktree", async (t)
       Effect.flatMap(({ runPostSwitchHooks }) =>
         runPostSwitchHooks("switchWorkspace"),
       ),
+      // @effect-diagnostics-next-line multipleEffectProvide:off
       Effect.provide(Hooks.layer),
       Effect.provide(PlatformServices),
     ),
@@ -896,6 +900,7 @@ printf '{"headRefName":"pr-17"}'
       targetBranch: undefined,
     }).pipe(
       Effect.flatMap(({ checkoutPr }) => checkoutPr(17)),
+      // @effect-diagnostics-next-line multipleEffectProvide:off
       Effect.provide(Hooks.layer),
       Effect.provide(PlatformServices),
     ),
@@ -961,6 +966,7 @@ test("runPostSwitchHooks executes hooks for an existing jj workspace", async (t)
       Effect.flatMap(({ runPostSwitchHooks }) =>
         runPostSwitchHooks("switchWorkspace"),
       ),
+      // @effect-diagnostics-next-line multipleEffectProvide:off
       Effect.provide(Hooks.layer),
       Effect.provide(PlatformServices),
     ),
@@ -1023,6 +1029,7 @@ git checkout pr-17 >/dev/null
         targetBranch: undefined,
       }).pipe(
         Effect.flatMap(({ checkoutPr }) => checkoutPr(17)),
+        // @effect-diagnostics-next-line multipleEffectProvide:off
         Effect.provide(Hooks.layer),
         Effect.provide(PlatformServices),
       ),

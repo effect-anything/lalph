@@ -85,6 +85,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   ).pipe(Layer.provideMerge(Hooks.layer))
 }
 
+// @effect-diagnostics-next-line effectFnOpportunity:off
 function buildWorktree(options?: {
   readonly forceCheckoutMode?: ProjectCheckoutMode
 }) {
@@ -525,16 +526,15 @@ export const makeExecHelpers = Effect.fnUntraced(function* (options: {
     )
 
   const runPostSwitchHooks = Effect.fnUntraced(function* (method: string) {
-    yield* hooks
-      .executeHook({
+    yield* hooks.executeHook({
         directory: options.directory,
         fallbackDirectory: options.repository.root,
         hookType: "post-switch",
         runCommand: execShell,
         templateValues: yield* getHookTemplateValues,
       })
-      .pipe(Effect.provideService(FileSystem.FileSystem, fs))
       .pipe(
+        Effect.provideService(FileSystem.FileSystem, fs),
         Effect.catchIf(
           (error): error is HookCommandFailedError =>
             error instanceof HookCommandFailedError,

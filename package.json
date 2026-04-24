@@ -9,7 +9,7 @@
     "lalph": "dist/cli.mjs"
   },
   "scripts": {
-    "prepare": "husky && effect-language-service patch",
+    "prepare": "husky && effect-tsgo patch",
     "check": "concurrently \"pnpm tsgo --noEmit\" \"pnpm oxlint -c .oxlintrc.json\" \"pnpm build\"",
     "build": "tsdown",
     "prepublishOnly": "pnpm build"
@@ -50,10 +50,10 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.30.0",
+    "@effect/tsgo": "0.0.16",
     "@effect/ai-anthropic": "4.0.0-beta.43",
     "@effect/ai-openai": "4.0.0-beta.43",
     "@effect/ai-openai-compat": "4.0.0-beta.43",
-    "@effect/language-service": "^0.84.2",
     "@effect/platform-node": "4.0.0-beta.43",
     "@linear/sdk": "^80.0.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
@@ -68,7 +68,6 @@
     "oxlint": "^1.57.0",
     "prettier": "^3.8.1",
     "tsdown": "^0.21.7",
-    "typescript": "^6.0.2",
     "yaml": "^2.8.3"
   },
   "lint-staged": {

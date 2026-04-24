@@ -66,6 +66,7 @@ test("Hooks.loadConfig returns none when hooks.yml is missing", async () => {
     Effect.gen(function* () {
       const hooks = yield* Hooks
       return yield* hooks.loadConfig(directory)
+    // @effect-diagnostics-next-line multipleEffectProvide:off
     }).pipe(Effect.provide(Hooks.layer), Effect.provide(PlatformServices)),
   )
 
@@ -101,6 +102,7 @@ test("Hooks.loadConfig parses hooks.yml from the worktree", async () => {
     Effect.gen(function* () {
       const hooks = yield* Hooks
       return yield* hooks.loadConfig(directory)
+    // @effect-diagnostics-next-line multipleEffectProvide:off
     }).pipe(Effect.provide(Hooks.layer), Effect.provide(PlatformServices)),
   )
 
@@ -149,6 +151,7 @@ test("Hooks.loadConfig falls back to the main worktree hooks.yml", async () => {
     Effect.gen(function* () {
       const hooks = yield* Hooks
       return yield* hooks.loadConfig(directory, mainDirectory)
+    // @effect-diagnostics-next-line multipleEffectProvide:off
     }).pipe(Effect.provide(Hooks.layer), Effect.provide(PlatformServices)),
   )
 
@@ -208,6 +211,7 @@ test("Hooks.executeHook sorts commands and interpolates template values", async 
           workspace: "AUT-70-hooks",
         },
       })
+    // @effect-diagnostics-next-line multipleEffectProvide:off
     }).pipe(Effect.provide(Hooks.layer), Effect.provide(PlatformServices)),
   )
 
@@ -254,6 +258,7 @@ test("Hooks.resolveHook returns sorted dry-run commands", async () => {
           worktree_path: "/repo/worktree",
         },
       })
+    // @effect-diagnostics-next-line multipleEffectProvide:off
     }).pipe(Effect.provide(Hooks.layer), Effect.provide(PlatformServices)),
   )
 
@@ -309,6 +314,7 @@ test("Hooks.executeHook fails when a command exits non-zero", async () => {
           runCommand: () => Effect.succeed(7),
           templateValues: {},
         })
+      // @effect-diagnostics-next-line multipleEffectProvide:off
       }).pipe(Effect.provide(Hooks.layer), Effect.provide(PlatformServices)),
     ),
     (error: unknown) =>

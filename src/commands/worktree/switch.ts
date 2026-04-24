@@ -55,11 +55,11 @@ export const commandWorktreeSwitch = Command.make("switch", {
           ? yield* resolveRepositoryWorkspace(repository, selector.value).pipe(
               Effect.catchTag("RepositoryWorkspaceAmbiguous", (error) => {
                 console.log(error.message)
-                return Effect.succeed(undefined)
+                return Effect.void
               }),
               Effect.catchTag("RepositoryWorkspaceNotFound", (error) => {
                 console.log(error.message)
-                return Effect.succeed(undefined)
+                return Effect.void
               }),
             )
           : switchableWorkspaces.length === 0

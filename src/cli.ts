@@ -18,28 +18,30 @@ import { commandSh } from "./commands/sh.ts"
 import { commandAgents } from "./commands/agents.ts"
 import { commandHooks } from "./commands/hooks.ts"
 import { commandWorktree } from "./commands/worktree.ts"
+import { ModelServices } from "./ClankaModels.ts"
 
-commandRoot.pipe(
-  Command.withSubcommands([
-    commandPlan,
-    commandIssue,
-    commandEdit,
-    commandSh,
-    commandWorktree,
-    commandHooks,
-    commandSource,
-    commandAgents,
-    commandProjects,
-  ]),
-  Command.provide(Settings.layer),
-  Command.provide(TracingLayer),
-  Command.provide(({ verbose }) => {
-    if (!verbose) return Layer.empty
-    return Layer.succeed(MinimumLogLevel, "All")
-  }),
-  Command.run({
-    version: PackageJson.version,
-  }),
-  Effect.provide(PlatformServices),
-  NodeRuntime.runMain,
+NodeRuntime.runMain(
+  commandRoot.pipe(
+    Command.withSubcommands([
+      commandPlan,
+      commandIssue,
+      commandEdit,
+      commandSh,
+      commandWorktree,
+      commandHooks,
+      commandSource,
+      commandAgents,
+      commandProjects,
+    ]),
+    Command.provide(Settings.layer),
+    Command.provide(TracingLayer),
+    Command.provide(({ verbose }) => {
+      if (!verbose) return Layer.empty
+      return Layer.succeed(MinimumLogLevel, "All")
+    }),
+    Command.run({
+      version: PackageJson.version,
+    }),
+    Effect.provide(Layer.merge(PlatformServices, ModelServices)),
+  ),
 )

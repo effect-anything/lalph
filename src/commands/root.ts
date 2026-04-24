@@ -53,6 +53,8 @@ import type { QuitError } from "effect/Terminal"
 import type { TimeoutError } from "effect/Cause"
 import type { ChildProcessSpawner } from "effect/unstable/process"
 import type { AiError } from "effect/unstable/ai/AiError"
+import type { HttpClient } from "effect/unstable/http"
+import type { KeyValueStore } from "effect/unstable/persistence"
 import type { PrdIssue } from "../domain/PrdIssue.ts"
 import type { OutputFormatter } from "clanka"
 import { ClankaMuxerLayer, SemanticSearchLayer } from "../Clanka.ts"
@@ -111,6 +113,8 @@ const run = Effect.fnUntraced(
     | Worktree
     | OutputFormatter.Muxer
     | Scope.Scope
+    | HttpClient.HttpClient
+    | KeyValueStore.KeyValueStore
   > {
     const projectId = yield* CurrentProjectId
     const fs = yield* FileSystem.FileSystem
@@ -410,6 +414,8 @@ const runRalph = Effect.fnUntraced(
     | Worktree
     | OutputFormatter.Muxer
     | Scope.Scope
+    | HttpClient.HttpClient
+    | KeyValueStore.KeyValueStore
   > {
     const worktree = yield* Worktree
     const gitFlow = yield* GitFlow

@@ -58,6 +58,7 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
             ),
         })
 
+      // @effect-diagnostics-next-line unnecessaryEffectGen:off
       const promptPat = Effect.gen(function* () {
         return yield* Prompt.password({
           message:
