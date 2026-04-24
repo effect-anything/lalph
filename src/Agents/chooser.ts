@@ -73,7 +73,7 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
     }),
     Effect.timeoutOrElse({
       duration: options.stallTimeout,
-      orElse: () => Effect.fail(new RunnerStalled()),
+      onTimeout: () => Effect.fail(new RunnerStalled()),
     }),
     Effect.raceFirst(taskJsonCreated),
   )

@@ -38,7 +38,7 @@ export const agentChooserRalph = Effect.fnUntraced(function* (options: {
       }),
       Effect.timeoutOrElse({
         duration: options.stallTimeout,
-        orElse: () => Effect.fail(new RunnerStalled()),
+        onTimeout: () => Effect.fail(new RunnerStalled()),
       }),
     )
   }

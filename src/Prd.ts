@@ -22,6 +22,9 @@ export class Prd extends ServiceMap.Service<
   Prd,
   {
     readonly path: string
+    readonly findById: (
+      issueId: string,
+    ) => Effect.Effect<PrdIssue | null, PlatformError.PlatformError>
     readonly maybeRevertIssue: (options: {
       readonly issueId: string
     }) => Effect.Effect<void, PlatformError.PlatformError | IssueSourceError>
@@ -106,9 +109,15 @@ export class Prd extends ServiceMap.Service<
         shouldAddAutoMerge = enabled
       })
 
+    const findById = Effect.fnUntraced(function* (issueId: string) {
+      const prdIssues = yield* readPrd
+      return prdIssues.find((issue) => issue.id === issueId) ?? null
+    })
+
     if (worktree.inExisting) {
       const initialPrdIssues = yield* readPrd
       return {
+        findById,
         path: prdFile,
         maybeRevertIssue,
         revertUpdatedIssues: Effect.gen(function* () {
@@ -125,10 +134,6 @@ export class Prd extends ServiceMap.Service<
           }
         }),
         flagUnmergable,
-        findById: Effect.fnUntraced(function* (issueId: string) {
-          const prdIssues = yield* readPrd
-          return prdIssues.find((i) => i.id === issueId) ?? null
-        }),
         setChosenIssueId,
         setAutoMerge,
       }
@@ -240,6 +245,7 @@ export class Prd extends ServiceMap.Service<
     )
 
     return {
+      findById,
       path: prdFile,
       maybeRevertIssue,
       revertUpdatedIssues: syncSemaphore.withPermit(
@@ -273,6 +279,7 @@ export class Prd extends ServiceMap.Service<
   )
   static layerNoop = Layer.succeed(this, {
     path: "",
+    findById: () => Effect.succeed(null),
     maybeRevertIssue: () => Effect.void,
     revertUpdatedIssues: Effect.void,
     flagUnmergable: () => Effect.void,
