@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.124
+
+### Patch Changes
+
+- [`9c8cded`](https://github.com/effect-anything/lalph/commit/9c8cded113bf8e4ba96b02d9a757f57df7ddcc96) Thanks [@xesrevinu](https://github.com/xesrevinu)! - Merge the latest upstream lalph changes from tim-smart while preserving fork-specific workflow features, including JJ/in-place execution, hook-driven worktree flows, review completion settings, and additional model providers.
+
 ## 0.3.123
 
 ### Patch Changes
