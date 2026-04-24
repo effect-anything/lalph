@@ -452,9 +452,9 @@ const runRalph = Effect.fnUntraced(
       preset,
       specFile: options.specFile,
     }).pipe(
-      Effect.tapErrorTag(
+      Effect.catchTag(
         "ChosenTaskNotFound",
-        Effect.fnUntraced(function* () {
+        Effect.fnUntraced(function* (error) {
           // Disable project when all tasks are done
           yield* Settings.update(
             allProjects,
@@ -464,6 +464,7 @@ const runRalph = Effect.fnUntraced(
               ),
             ),
           )
+          return yield* error
         }),
       ),
       Effect.withSpan("Main.chooser"),
