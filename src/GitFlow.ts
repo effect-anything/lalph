@@ -30,7 +30,6 @@ import {
   type VcsKind,
 } from "./shared/vcs.ts"
 
-// @effect-diagnostics-next-line leakingRequirements:off
 export class GitFlow extends ServiceMap.Service<
   GitFlow,
   {

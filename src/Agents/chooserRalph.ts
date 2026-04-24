@@ -15,6 +15,24 @@ export const agentChooserRalph = Effect.fnUntraced(function* (options: {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
+  const effectTimeoutOrElseCompat = Effect.timeoutOrElse as unknown as <
+    A,
+    E,
+    R,
+  >(
+    effect: Effect.Effect<A, E, R>,
+    options: {
+      readonly duration: Duration.Duration
+      readonly onTimeout?: () => Effect.Effect<never, RunnerStalled>
+      readonly orElse?: () => Effect.Effect<never, RunnerStalled>
+    },
+  ) => Effect.Effect<A, E | RunnerStalled, R>
+  const timeoutOrElseCompat = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    effectTimeoutOrElseCompat(effect, {
+      duration: options.stallTimeout,
+      onTimeout: () => Effect.fail(new RunnerStalled()),
+      orElse: () => Effect.fail(new RunnerStalled()),
+    }) as Effect.Effect<A, E | RunnerStalled, R>
 
   // use clanka
   if (!options.preset.cliAgent.command) {
@@ -36,10 +54,7 @@ export const agentChooserRalph = Effect.fnUntraced(function* (options: {
       worktree.execWithWorkerOutput({
         cliAgent: options.preset.cliAgent,
       }),
-      Effect.timeoutOrElse({
-        duration: options.stallTimeout,
-        onTimeout: () => Effect.fail(new RunnerStalled()),
-      }),
+      timeoutOrElseCompat,
     )
   }
 

@@ -67,6 +67,21 @@ import { CurrentTask } from "../domain/CurrentTask.ts"
 const jjTaskMessage = (task: PrdIssue) =>
   task.id ? `${task.id} ${task.title}` : task.title
 
+const effectTimeoutOrElseCompat = Effect.timeoutOrElse as unknown as <A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  options: {
+    readonly duration: Duration.Duration
+    readonly onTimeout?: () => Effect.Effect<never, RunnerStalled>
+    readonly orElse?: () => Effect.Effect<never, RunnerStalled>
+  },
+) => Effect.Effect<A, E | RunnerStalled, R>
+
+type StandardChosenTask = {
+  readonly id: string
+  readonly githubPrNumber: number | null
+  readonly prd: PrdIssue
+}
+
 export const shouldAutoSetIssueDone = (options: {
   readonly reviewCompletion: ProjectReviewCompletion
   readonly task: PrdIssue | null
@@ -171,10 +186,14 @@ const run = Effect.fnUntraced(
       s.transitionTo(WorkerStatus.ChoosingTask()),
     )
 
-    const chosenTask = yield* agentChooser({
+    const chosenTask: StandardChosenTask = yield* (agentChooser({
       stallTimeout: options.stallTimeout,
       preset,
-    }).pipe(Effect.withSpan("Main.agentChooser"))
+    }).pipe(Effect.withSpan("Main.agentChooser")) as Effect.Effect<
+      StandardChosenTask,
+      ChosenTaskNotFound | RunnerStalled | AiError,
+      CurrentProjectId | IssueSource | PromptGen | Worktree | GitFlow
+    >)
 
     taskId = chosenTask.id
     yield* source.updateIssue({
@@ -201,12 +220,14 @@ const run = Effect.fnUntraced(
       }
     }
 
-    yield* source.ensureInProgress(projectId, taskId).pipe(
-      Effect.timeoutOrElse({
-        duration: "1 minute",
-        onTimeout: () => Effect.fail(new RunnerStalled()),
-      }),
-    )
+    yield* (source.ensureInProgress(projectId, taskId).pipe(
+      (effect) =>
+        effectTimeoutOrElseCompat(effect, {
+          duration: Duration.minutes(1),
+          onTimeout: () => Effect.fail(new RunnerStalled()),
+          orElse: () => Effect.fail(new RunnerStalled()),
+        }),
+    ) as Effect.Effect<void, RunnerStalled, never>)
 
     yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
@@ -447,7 +468,7 @@ const runRalph = Effect.fnUntraced(
       s.transitionTo(WorkerStatus.ChoosingTask()),
     )
 
-    const chosenTask = yield* agentChooserRalph({
+    const chosenTask: string = yield* (agentChooserRalph({
       stallTimeout: options.stallTimeout,
       preset,
       specFile: options.specFile,
@@ -468,7 +489,7 @@ const runRalph = Effect.fnUntraced(
         }),
       ),
       Effect.withSpan("Main.chooser"),
-    )
+    ) as Effect.Effect<string, ChosenTaskNotFound | RunnerStalled | AiError, never>)
 
     yield* Effect.gen(function* () {
       //

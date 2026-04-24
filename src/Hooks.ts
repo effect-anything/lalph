@@ -93,7 +93,6 @@ const sortHookCommands = (hookSection: HooksConfig["hooks"][HookType]) =>
     left.localeCompare(right),
   )
 
-// @effect-diagnostics-next-line leakingRequirements:off
 export class Hooks extends ServiceMap.Service<
   Hooks,
   {
